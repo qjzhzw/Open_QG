@@ -1,6 +1,7 @@
 ### Vocab类（核心是self.vocab，这是一个集合，包含了所有的元素，这些元素的类型为Vocab_element）
 ### Vocab_element是Vocab类中的每个元素，包含word/index/freq/embedding
 
+
 class Vocab():
     def __init__(self):
         self.vocab = []
