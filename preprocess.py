@@ -4,6 +4,8 @@ import argparse
 import logging
 import json
 import os
+import torch
+
 from vocab import Vocab
 
 logger = logging.getLogger()
@@ -145,6 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--dev_answer_start', type=str, default='dev/answer_start.txt', help='验证集答案开始位置')
     parser.add_argument('--dev_answer_end', type=str, default='dev/answer_end.txt', help='验证集答案结束位置')
     parser.add_argument('--vocab_dir', type=str, default='vocab.txt', help='vocab位置')
+    parser.add_argument('--output_dir', type=str, default='output.pt', help='输出的pt文件位置')
     params = parser.parse_args()
 
     train_input = os.path.join(params.main_data_dir, params.data_dir, params.train_input)
@@ -156,6 +159,7 @@ if __name__ == '__main__':
     dev_answer_start = os.path.join(params.main_data_dir, params.data_dir, params.dev_answer_start)
     dev_answer_end = os.path.join(params.main_data_dir, params.data_dir, params.dev_answer_end)
     vocab_dir = os.path.join(params.main_data_dir, params.data_dir, params.vocab_dir)
+    output_dir = os.path.join(params.main_data_dir, params.data_dir, params.output_dir)
 
     # 将文件中的输出转化为二维list
     train_input_sentences = load_dataset(train_input)
@@ -177,3 +181,12 @@ if __name__ == '__main__':
     train_output_indices = convert_sentence2index(train_output_sentences, vocab)
     dev_input_indices = convert_sentence2index(dev_input_sentences, vocab)
     dev_output_indices = convert_sentence2index(dev_output_sentences, vocab)
+
+    data = {
+        'vocab' : vocab,
+        'train_input_indices' : train_input_indices,
+        'train_output_indices' : train_output_indices,
+        'dev_input_indices' : dev_input_indices,
+        'dev_output_indices' : dev_output_indices,
+    }
+    torch.save(data, output_dir)
