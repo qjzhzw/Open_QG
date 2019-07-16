@@ -4,27 +4,15 @@ import argparse
 import logging
 import json
 import os
+from vocab import Vocab
 
 logger = logging.getLogger()
 
-PAD = 0
-UNK = 1
-BOS = 2
-EOS = 3
-CLS = 4
-SEP = 5
-
-PAD_WORD = '<blank>'
-UNK_WORD = '<unk>'
-BOS_WORD = '<s>'
-EOS_WORD = '</s>'
-CLS_WORD = '<cls>'
-SEP_WORD = '<sep>'
 
 def load_dataset(origin_file):
     '''
     origin_file: 输入的原始文件
-    sentences: 输入文件的每个句子切分过后每个token组成二维list
+    return sentences: 输入文件的每个句子切分过后每个token组成二维list
     '''
 
     logger.info('正在从{}中加载数据'.format(origin_file))
@@ -37,7 +25,7 @@ def load_dataset(origin_file):
     # 依次处理所有数据
     for instance in instances:
         words = instance.strip().split()
-        sentence = [BOS_WORD] + words + [EOS_WORD]
+        sentence = ['<s>'] + words + ['</s>']
         sentences.append(sentence)
     
     logger.info('成功加载数据{}'.format(len(sentences)))
@@ -49,7 +37,7 @@ def load_answer(answer_start_file, answer_end_file):
     '''
     answer_start_file: 输出的答案开始位置文件
     answer_end_file: 输出的答案开始位置文件
-    answers: 每个答案开始/结束位置组成二维list
+    return answers: 每个答案开始/结束位置组成二维list
     '''
 
     logger.info('正在从{}和{}中加载数据'.format(answer_start_file, answer_end_file))
@@ -80,6 +68,7 @@ def build_vocab(sentences, vocab_dir):
     '''
     sentences: 输入所有样本
     vocab_dir: 输出vocab文件位置
+    return vocab: 输出Vocab类,其中包含了数据集中的所有单词
     '''
 
     # 统计词频
@@ -98,18 +87,40 @@ def build_vocab(sentences, vocab_dir):
     f_vocab = open(vocab_dir, 'w')
 
     # 构造vocab
-    word_index = {}
-    index = 0
+    vocab = Vocab()
+    # vocab在建立时,就已经包含了一定数量的常数,因此根据数据集添加单词时并不是以0作为起始索引
+    index = vocab.size()
     for item in word_freq:
         word = item[0]
         freq = item[1]
-        word_index[word] = index
-        index += 1
-        f_vocab.write(word + ' ' + str(freq) + '\n')
+        # 如果单词不在vocab中,就添加进去,否则放弃掉
+        if not vocab.has_word(word):
+            vocab.add_element(word, index, freq)
+            index += 1
 
-    logger.info('vocab大小为{}'.format(len(word_index)))
+    # 将构造的vocab中,每个元素的信息(单词/索引)输出到文件中
+    for element in vocab.vocab:
+        f_vocab.write('{} {} {}\n'.format(element.word, element.index, element.freq))
 
-    return word_index
+    logger.info('vocab大小为{}'.format(vocab.size()))
+
+    return vocab
+
+
+def convert_sentence2index(sentences, vocab):
+    '''
+    sentences: 输入所有样本,均为单词形式
+    vocab: Vocab类,其中包含了数据集中的所有单词
+    return sentences_index: 输出所有样本,均为索引形式
+    '''
+
+    # 将单词转化为索引形式
+    sentences_index = []
+    for sentence in sentences:
+        sentence_index = vocab.convert_sentence2index(sentence)
+        sentences_index.append(sentence_index)
+
+    return sentences_index
 
 
 if __name__ == '__main__':
@@ -158,4 +169,11 @@ if __name__ == '__main__':
     assert len(train_input_sentences) == len(train_output_sentences) == len(train_answers)
     assert len(dev_input_sentences) == len(dev_output_sentences) == len(dev_answers)
 
-    build_vocab(train_input_sentences + train_output_sentences + dev_input_sentences + dev_output_sentences, vocab_dir)
+    # 构造vocab
+    vocab = build_vocab(train_input_sentences + train_output_sentences + dev_input_sentences + dev_output_sentences, vocab_dir)
+
+    # 将单词转化为index
+    train_input_indices = convert_sentence2index(train_input_sentences, vocab)
+    train_output_indices = convert_sentence2index(train_output_sentences, vocab)
+    dev_input_indices = convert_sentence2index(dev_input_sentences, vocab)
+    dev_output_indices = convert_sentence2index(dev_output_sentences, vocab)

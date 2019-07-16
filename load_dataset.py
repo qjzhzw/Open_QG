@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # 加载参数
     parser = argparse.ArgumentParser()
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
-    parser.add_argument('--data_dir', stype=str, default='squad', help='需要处理的数据所在的子目录')
+    parser.add_argument('--data_dir', type=str, default='squad', help='需要处理的数据所在的子目录')
     params = parser.parse_args()
 
     # 判断子目录train/dev/test是否存在，若不存在则创建
