@@ -91,7 +91,7 @@ def build_vocab(sentences, vocab_dir):
     # 构造vocab
     vocab = Vocab()
     # vocab在建立时,就已经包含了一定数量的常数,因此根据数据集添加单词时并不是以0作为起始索引
-    index = vocab.size()
+    index = len(vocab)
     for item in word_freq:
         word = item[0]
         freq = item[1]
@@ -104,7 +104,7 @@ def build_vocab(sentences, vocab_dir):
     for element in vocab.vocab:
         f_vocab.write('{} {} {}\n'.format(element.word, element.index, element.freq))
 
-    logger.info('vocab大小为{}'.format(vocab.size()))
+    logger.info('vocab大小为{}'.format(len(vocab)))
 
     return vocab
 

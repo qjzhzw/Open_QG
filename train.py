@@ -130,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
-    parser.add_argument('--learning_rate', type=int, default=0.1, help='模型超参数:learning_rate(学习率)')
+    parser.add_argument('--learning_rate', type=float, default=0.1, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
     parser.add_argument('--embedding_size', type=int, default=512, help='模型超参数:embedding_size')
     params = parser.parse_args()
