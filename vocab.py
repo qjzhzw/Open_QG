@@ -22,7 +22,7 @@ class Vocab():
         self.index2word[index] = word
 
     # Vocab类的大小,即包含了多少[单词,索引]这样的元素
-    def size(self):
+    def __len__(self):
         return len(self.vocab)
 
     # 判断Vocab类中是否包含某个单词
