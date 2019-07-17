@@ -21,15 +21,15 @@ class Dataset(torch.utils.data.Dataset):
         self.dev_input_indices = data['dev_input_indices']
         self.dev_output_indices = data['dev_output_indices']
 
+        # 断言: mode值一定在['train', 'dev']范围内
+        assert self.mode in ['train', 'dev']
+
         # 断言: 训练集/验证集的输入输出数量必须一致
         assert len(self.train_input_indices) == len(self.train_output_indices)
         assert len(self.dev_input_indices) == len(self.dev_output_indices)
 
     # 这个方法必须实现,返回每个batch的内容
     def __getitem__(self, index):
-        # 断言: mode值一定在['train', 'dev']范围内
-        assert self.mode in ['train', 'dev']
-
         # 根据mode值的不同返回不同的内容
         if self.mode == 'train':
             return self.train_input_indices[index], self.train_output_indices[index], self.vocab
@@ -38,7 +38,11 @@ class Dataset(torch.utils.data.Dataset):
 
     # 这个方法必须实现,否则会报错:NotImplementedError
     def __len__(self):
-        return len(self.train_input_indices)
+        # 根据mode值的不同返回不同的内容
+        if self.mode == 'train':
+            return len(self.train_input_indices)
+        elif self.mode == 'dev':
+            return len(self.dev_input_indices)
 
 
 def collate_fn(data):

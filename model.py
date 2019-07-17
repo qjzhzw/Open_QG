@@ -25,25 +25,22 @@ class Model(nn.Module):
         # 输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         self.output = nn.Linear(params.embedding_size, self.vocab_size)
 
-    def forward(self, train_input_indices, train_output_indices):
+    def forward(self, input_indices, output_indices):
         '''
-        train_input_indices: [batch_size, input_seq_len]
-        train_output_indices: [batch_size, output_seq_len]
+        input_indices: [batch_size, input_seq_len]
+        output_indices: [batch_size, output_seq_len]
         '''
 
-        train_input_indices = self.embedder(train_input_indices)
-        # train_input_indices: [batch_size, input_seq_len, embedding_size]
+        input_indices = self.embedder(input_indices)
+        # input_indices: [batch_size, input_seq_len, embedding_size]
 
-        train_output_indices = self.embedder(train_output_indices)
-        # train_output_indices: [batch_size, output_seq_len, embedding_size]
+        output_indices = self.embedder(output_indices)
+        # output_indices: [batch_size, output_seq_len, embedding_size]
 
-        train_output_indices = self.output(train_output_indices)
-        # train_output_indices: [batch_size, output_seq_len, vocab_size]
+        output_indices = self.output(output_indices)
+        # output_indices: [batch_size, output_seq_len, vocab_size]
 
-        train_output_indices = F.softmax(train_output_indices)
-        # train_output_indices: [batch_size, output_seq_len, vocab_size]
+        output_indices = output_indices.permute(0, 2, 1)
+        # output_indices: [batch_size, vocab_size, output_seq_len]
 
-        train_output_indices = train_output_indices.permute(0, 2, 1)
-        # train_output_indices: [batch_size, vocab_size, output_seq_len]
-
-        return train_output_indices
+        return output_indices

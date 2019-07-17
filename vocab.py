@@ -1,6 +1,7 @@
 ### Vocab类（核心是self.vocab，这是一个集合，包含了所有的元素，这些元素的类型为Vocab_element）
 ### Vocab_element是Vocab类中的每个元素，包含word/index/freq/embedding
 
+import torch
 
 class Vocab():
     def __init__(self):
@@ -34,6 +35,11 @@ class Vocab():
 
     # 将一个句子,从单词序列转换为索引形式
     def convert_sentence2index(self, sentence):
+        # 如果输入是tensor形式,转换为numpy形式
+        if torch.is_tensor(sentence):
+            sentence = sentence.cpu().numpy()
+
+        # 通过遍历的方式,将单词序列转换为索引形式
         indices = []
         for word in sentence:
             indices.append(self.word2index[word])
@@ -41,9 +47,14 @@ class Vocab():
 
     # 将一个句子,从索引序列转换为单词形式
     def convert_index2sentence(self, indices):
+        # 如果输入是tensor形式,转换为numpy形式
+        if torch.is_tensor(indices):
+            indices = indices.cpu().numpy()
+
+        # 通过遍历的方式,将单词序列转换为索引形式
         sentence = []
         for index in indices:
-            sentence.append(self.index2word[index])
+            sentence.append(self.index2word[index.item()])
         return sentence
 
 
