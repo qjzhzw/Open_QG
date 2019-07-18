@@ -61,12 +61,23 @@ def train_model(train_loader, dev_loader, vocab, params):
 
     # 定义模型
     model = Model(params, vocab)
+
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
     flag_cuda = False
     if params.cuda and torch.cuda.is_available():
         model.cuda()
         flag_cuda = True
     logger.info('当前模型cuda设置为{}'.format(flag_cuda))
+
+    # 如果参数中设置了打印模型结构,则打印模型结构
+    if params.print_model:
+        logger.info(model)
+
+    # 如果参数中设置了加载训练好的模型参数且模型参数文件存在,则加载模型参数
+    if params.load_model and os.path.exists(params.checkpoint_file):
+        model_params = torch.load(params.checkpoint_file)
+        model.load_state_dict(model_params)
+        logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
 
     # 定义优化器
     optimizer = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
@@ -205,6 +216,8 @@ if __name__ == '__main__':
     parser.add_argument('--pred_file', type=str, default='pred.txt', help='输出的预测文件位置')
     parser.add_argument('--gold_file', type=str, default='gold.txt', help='用于比较的真实文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
+    parser.add_argument('--print_model', type=bool, default=True, help='是否打印出模型结构')
+    parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
