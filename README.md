@@ -17,16 +17,16 @@
 
 ## 文件结构介绍：
 #### 文件夹:
-/data : 存储原始数据(数据较大无法上传)
-/checkpoint : 存储训练好的模型参数(需要时会自动创建)
-/output : 存储预测文件(需要时会自动创建)
-/evaluate : 评价结果的脚本,包含BLEU/METEOR/ROUGH-L(由Du et al. 2017提供)
+/data : 存储原始数据(数据较大无法上传)  
+/checkpoint : 存储训练好的模型参数(需要时会自动创建)  
+/output : 存储预测文件(需要时会自动创建)  
+/evaluate : 评价结果的脚本,包含BLEU/METEOR/ROUGH-L(由Du et al. 2017提供)  
 #### python文件:
-load_dataset.py : 读取原始数据构造成文本形式
-preprocess.py : 数据预处理
-train.py : 模型训练+验证
-vocab.py : Vocab类(构造任务所使用词表)
-dataset.py : Dataset类(将数据构造成batch形式)
-model.py : Model类(Transformer模型)
+load_dataset.py : 读取原始数据构造成文本形式  
+preprocess.py : 数据预处理  
+train.py : 模型训练+验证  
+vocab.py : Vocab类(构造任务所使用词表)  
+dataset.py : Dataset类(将数据构造成batch形式)  
+model.py : Model类(Transformer模型)  
 #### shell脚本:
-pipeline.sh 运行脚本
+pipeline.sh 运行脚本  
