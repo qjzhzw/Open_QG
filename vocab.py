@@ -54,7 +54,11 @@ class Vocab():
         # 通过遍历的方式,将单词序列转换为索引形式
         sentence = []
         for index in indices:
-            sentence.append(self.index2word[index.item()])
+            # 遇到</s>就停止
+            if index != self.word2index['</s>']:
+                sentence.append(self.index2word[index])
+            else:
+                break
         return sentence
 
 

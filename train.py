@@ -61,8 +61,6 @@ def train_model(train_loader, dev_loader, vocab, params):
 
     # 定义模型
     model = Model(params, vocab)
-    # 使模型进入训练模式,即保留dropout等
-    model.train()
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
     flag_cuda = False
     if params.cuda and torch.cuda.is_available():
@@ -120,8 +118,10 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
 
     if mode == 'train':
         logger.info('训练第{}轮'.format(epoch))
+        model.train()
     elif mode == 'dev':
         logger.info('验证第{}轮'.format(epoch))
+        model.eval()
 
     # 对于验证阶段,我们保存所有得到的输出序列
     sentences_pred = []
@@ -157,12 +157,12 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         # NLLLoss(x,y)的两个参数:
         # x: [batch_size, num_classes, ……], 类型为LongTensor, 是预测输出
         # y: [batch_size, ……], 类型为LongTensor, 是真实输出
-        loss_func = torch.nn.CrossEntropyLoss(ignore_index=vocab.word2index['<pad>'])
+        criterion = torch.nn.CrossEntropyLoss(ignore_index=vocab.word2index['<pad>'])
 
         # 利用预测输出和真实输出计算损失
         # output_indices_pred: [batch_size, vocab_size, output_seq_len]
         # output_indices_gold: [batch_size, output_seq_len]
-        loss = loss_func(output_indices_pred, output_indices_gold)
+        loss = criterion(output_indices_pred, output_indices_gold)
         logger.info('Epoch : {}, batch : {}/{}, loss : {}'.format(epoch, batch_index, len(loader), loss))
 
         # 如果是训练阶段,就利用优化器进行BP反向传播,更新参数
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
-    parser.add_argument('--learning_rate', type=float, default=0.1, help='模型超参数:learning_rate(学习率)')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
     parser.add_argument('--embedding_size', type=int, default=512, help='模型超参数:embedding_size')
     params = parser.parse_args()

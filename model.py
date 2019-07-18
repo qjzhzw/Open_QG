@@ -22,6 +22,10 @@ class Model(nn.Module):
         # embedding层,将索引转换为词向量
         self.embedder = nn.Embedding(self.vocab_size, params.embedding_size)
 
+        # 测试所使用LSTM
+        self.lstm_encoder = nn.LSTM(params.embedding_size, params.embedding_size, batch_first=True, num_layers=1)
+        self.lstm_decoder = nn.LSTM(params.embedding_size, params.embedding_size, batch_first=True, num_layers=1)
+
         # 输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         self.output = nn.Linear(params.embedding_size, self.vocab_size)
 
@@ -36,6 +40,10 @@ class Model(nn.Module):
 
         output_indices = self.embedder(output_indices)
         # output_indices: [batch_size, output_seq_len, embedding_size]
+
+        # 测试所使用LSTM
+        _, hidden = self.lstm_encoder(input_indices)
+        output_indices, _ = self.lstm_decoder(output_indices, hidden)
 
         output_indices = self.output(output_indices)
         # output_indices: [batch_size, output_seq_len, vocab_size]
