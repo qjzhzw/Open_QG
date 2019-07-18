@@ -60,7 +60,7 @@ def load_dataset(origin_file, sentence_file, question_file, answer_start_file, a
         sentence.extend(answer)
         sentence.append('<sep>')
 
-        # 保存输出
+        # 将处理好的数据存入本地文件
         if answer_start != None and answer_end != None:
             f_sentence.write(' '.join(sentence) + '\n')
             f_question.write(' '.join(question) + '\n')

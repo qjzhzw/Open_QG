@@ -8,6 +8,7 @@ from cider.cider import Cider
 from collections import defaultdict
 from argparse import ArgumentParser
 
+import os
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -92,11 +93,11 @@ def eval(out_file, src_file, tgt_file, isDIn = False, num_pairs = 500):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--in_path", "--in_path", dest="in_path", default="data/multi30k/test", help="in_path")
+    parser.add_argument("--dataset_dir", type=str, default="squad")
     args = parser.parse_args()
-    parser.add_argument("--out", "--out_file", dest="out_file", default=args.in_path + ".pred.out", help="output file to compare")
-    parser.add_argument("--src", "--src_file", dest="src_file", default=args.in_path + ".ref.out", help="src file")
-    parser.add_argument("--tgt", "--tgt_file", dest="tgt_file", default=args.in_path + ".ref.out", help="target file")
+    parser.add_argument("--out", "--out_file", dest="out_file", default=os.path.join("output", args.dataset_dir, "pred.txt"), help="output file to compare")
+    parser.add_argument("--src", "--src_file", dest="src_file", default=os.path.join("output", args.dataset_dir, "gold.txt"), help="src file")
+    parser.add_argument("--tgt", "--tgt_file", dest="tgt_file", default=os.path.join("output", args.dataset_dir, "gold.txt"), help="target file")
     args = parser.parse_args()
 
     print("\nscores: ")

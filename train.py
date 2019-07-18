@@ -4,6 +4,7 @@ import argparse
 import logging
 import json
 import os
+import shutil
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -32,7 +33,6 @@ def prepare_dataloaders(data, params):
         collate_fn = collate_fn,
         shuffle = True
     )
-
     logger.info('正在构造train_loader,共有{}个batch'.format(len(train_dataset)))
 
     # 构造dev_loader
@@ -44,7 +44,6 @@ def prepare_dataloaders(data, params):
         collate_fn = collate_fn,
         shuffle = False
     )
-
     logger.info('正在构造dev_loader,共有{}个batch'.format(len(dev_dataset)))
 
     return train_loader, dev_loader
@@ -69,7 +68,6 @@ def train_model(train_loader, dev_loader, vocab, params):
     if params.cuda and torch.cuda.is_available():
         model.cuda()
         flag_cuda = True
-
     logger.info('当前模型cuda设置为{}'.format(flag_cuda))
 
     # 定义优化器
@@ -78,15 +76,29 @@ def train_model(train_loader, dev_loader, vocab, params):
     # 每一轮的训练和验证
     for epoch in range(params.num_epochs):
         # 一轮模型训练
-        # model, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
+        model, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
         # 一轮模型验证
-        # model, sentences_pred = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
+        model, sentences_pred = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
 
-        # 存储训练好的模型
+        # 将预测结果存入本地文件
+        if not os.path.exists(params.output_dir):
+            os.makedirs(params.output_dir)
+        f_pred = open(params.pred_file, 'w')
+        for sentence_pred in sentences_pred:
+            f_pred.write(sentence_pred + '\n')
+        f_pred.close()
+        logger.info('第{}轮的预测结果已经保存至{}'.format(epoch, params.pred_file))
+
+        # 原始的真实输出文件,需要从数据目录移动到输出目录下,用于和预测结果进行比较
+        shutil.copyfile(params.origin_gold_file, params.gold_file)
+
+        # 使用multi-bleu.perl的脚本对结果进行评估
+        os.system('evaluate/multi-bleu.perl %s < %s' %(params.gold_file, params.pred_file))
+
+        # 将训练好的模型参数存入本地文件
         if not os.path.exists(params.checkpoint_dir):
             os.makedirs(params.checkpoint_dir)
         torch.save(model.state_dict(), params.checkpoint_file)
-
         logger.info('第{}轮的模型参数已经保存至{}'.format(epoch, params.checkpoint_file))
 
 
@@ -151,8 +163,7 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         # output_indices_pred: [batch_size, vocab_size, output_seq_len]
         # output_indices_gold: [batch_size, output_seq_len]
         loss = loss_func(output_indices_pred, output_indices_gold)
-
-        logger.info('当前训练第{}轮,第{}/{}个batch,损失为{}'.format(epoch, batch_index, len(loader), loss))
+        logger.info('Epoch : {}, batch : {}/{}, loss : {}'.format(epoch, batch_index, len(loader), loss))
 
         # 如果是训练阶段,就利用优化器进行BP反向传播,更新参数
         if mode == 'train':
@@ -191,7 +202,8 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='输入的pt文件位置')
     parser.add_argument('--checkpoint_file', type=str, default='checkpoint.pt', help='输出的模型参数位置')
-    parser.add_argument('--output_file', type=str, default='pred.txt', help='输出的预测文件位置')
+    parser.add_argument('--pred_file', type=str, default='pred.txt', help='输出的预测文件位置')
+    parser.add_argument('--gold_file', type=str, default='gold.txt', help='用于比较的真实文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
@@ -204,7 +216,11 @@ if __name__ == '__main__':
     params.checkpoint_dir = os.path.join(params.main_checkpoint_dir, params.dataset_dir)
     params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
     params.output_dir = os.path.join(params.main_output_dir, params.dataset_dir)
-    params.output_file = os.path.join(params.main_output_dir, params.dataset_dir, params.output_file)
+    params.pred_file = os.path.join(params.main_output_dir, params.dataset_dir, params.pred_file)
+
+    # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
+    params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'dev/question.txt')
+    params.gold_file = os.path.join(params.main_output_dir, params.dataset_dir, params.gold_file)
 
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列

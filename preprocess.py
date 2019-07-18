@@ -103,7 +103,6 @@ def build_vocab(sentences, vocab_dir):
     # 将构造的vocab中,每个元素的信息(单词/索引)输出到文件中
     for element in vocab.vocab:
         f_vocab.write('{} {} {}\n'.format(element.word, element.index, element.freq))
-
     logger.info('vocab大小为{}'.format(len(vocab)))
 
     return vocab
