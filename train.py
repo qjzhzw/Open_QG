@@ -75,10 +75,19 @@ def train_model(train_loader, dev_loader, vocab, params):
     # 定义优化器
     optimizer = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
 
-    # 每一轮的训练
+    # 每一轮的训练和验证
     for epoch in range(params.num_epochs):
-        # one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
-        one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
+        # 一轮模型训练
+        # model, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
+        # 一轮模型验证
+        # model, sentences_pred = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
+
+        # 存储训练好的模型
+        if not os.path.exists(params.checkpoint_dir):
+            os.makedirs(params.checkpoint_dir)
+        torch.save(model.state_dict(), params.checkpoint_file)
+
+        logger.info('第{}轮的模型参数已经保存至{}'.format(epoch, params.checkpoint_file))
 
 
 def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
@@ -91,6 +100,8 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
     params: 参数集合
     mode: train表示是训练阶段
           dev表示是验证阶段
+    return model: 训练/验证结束时得到的模型
+    return sentences_pred: 验证结束时得到的预测序列集合(只有验证时有内容,训练时为空list)
     '''
     # 断言: mode值一定在['train', 'dev']范围内
     assert mode in ['train', 'dev']
@@ -159,7 +170,8 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
             for indices in indices_pred:
                 sentence = vocab.convert_index2sentence(indices)
                 sentences_pred.append(' '.join(sentence))
-            print(sentences_pred[-1])
+
+    return model, sentences_pred
 
 
 if __name__ == '__main__':
@@ -174,8 +186,12 @@ if __name__ == '__main__':
     # 加载参数
     parser = argparse.ArgumentParser()
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
-    parser.add_argument('--data_dir', type=str, default='squad', help='需要处理的数据所在的子目录')
-    parser.add_argument('--input_dir', type=str, default='output.pt', help='输入的pt文件位置')
+    parser.add_argument('--main_checkpoint_dir', type=str, default='checkpoint', help='输出的模型参数目录')
+    parser.add_argument('--main_output_dir', type=str, default='output', help='输出的预测文件目录')
+    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
+    parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='输入的pt文件位置')
+    parser.add_argument('--checkpoint_file', type=str, default='checkpoint.pt', help='输出的模型参数位置')
+    parser.add_argument('--output_file', type=str, default='pred.txt', help='输出的预测文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
@@ -184,11 +200,15 @@ if __name__ == '__main__':
     parser.add_argument('--embedding_size', type=int, default=512, help='模型超参数:embedding_size')
     params = parser.parse_args()
 
-    input_dir = os.path.join(params.main_data_dir, params.data_dir, params.input_dir)
+    params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
+    params.checkpoint_dir = os.path.join(params.main_checkpoint_dir, params.dataset_dir)
+    params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
+    params.output_dir = os.path.join(params.main_output_dir, params.dataset_dir)
+    params.output_file = os.path.join(params.main_output_dir, params.dataset_dir, params.output_file)
 
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列
-    data = torch.load(input_dir)
+    data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
 
     # 根据加载数据构造batch(使用pytorch中的datasets类)

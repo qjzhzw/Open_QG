@@ -137,7 +137,7 @@ if __name__ == '__main__':
     # 加载参数
     parser = argparse.ArgumentParser()
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
-    parser.add_argument('--data_dir', type=str, default='squad', help='需要处理的数据所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--train_input', type=str, default='train/sentence.txt', help='训练集输入')
     parser.add_argument('--train_output', type=str, default='train/question.txt', help='训练集输出')
     parser.add_argument('--train_answer_start', type=str, default='train/answer_start.txt', help='训练集答案开始位置')
@@ -146,35 +146,36 @@ if __name__ == '__main__':
     parser.add_argument('--dev_output', type=str, default='dev/question.txt', help='验证集输出')
     parser.add_argument('--dev_answer_start', type=str, default='dev/answer_start.txt', help='验证集答案开始位置')
     parser.add_argument('--dev_answer_end', type=str, default='dev/answer_end.txt', help='验证集答案结束位置')
-    parser.add_argument('--vocab_dir', type=str, default='vocab.txt', help='vocab位置')
-    parser.add_argument('--output_dir', type=str, default='output.pt', help='输出的pt文件位置')
+    parser.add_argument('--vocab_file', type=str, default='vocab.txt', help='vocab位置')
+    parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='输出的pt文件位置')
     params = parser.parse_args()
 
-    train_input = os.path.join(params.main_data_dir, params.data_dir, params.train_input)
-    train_output = os.path.join(params.main_data_dir, params.data_dir, params.train_output)
-    train_answer_start = os.path.join(params.main_data_dir, params.data_dir, params.train_answer_start)
-    train_answer_end = os.path.join(params.main_data_dir, params.data_dir, params.train_answer_end)
-    dev_input = os.path.join(params.main_data_dir, params.data_dir, params.dev_input)
-    dev_output = os.path.join(params.main_data_dir, params.data_dir, params.dev_output)
-    dev_answer_start = os.path.join(params.main_data_dir, params.data_dir, params.dev_answer_start)
-    dev_answer_end = os.path.join(params.main_data_dir, params.data_dir, params.dev_answer_end)
-    vocab_dir = os.path.join(params.main_data_dir, params.data_dir, params.vocab_dir)
-    output_dir = os.path.join(params.main_data_dir, params.data_dir, params.output_dir)
+    params.train_input = os.path.join(params.main_data_dir, params.dataset_dir, params.train_input)
+    params.train_output = os.path.join(params.main_data_dir, params.dataset_dir, params.train_output)
+    params.train_answer_start = os.path.join(params.main_data_dir, params.dataset_dir, params.train_answer_start)
+    params.train_answer_end = os.path.join(params.main_data_dir, params.dataset_dir, params.train_answer_end)
+    params.dev_input = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_input)
+    params.dev_output = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_output)
+    params.dev_answer_start = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_answer_start)
+    params.dev_answer_end = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_answer_end)
+    params.vocab_file = os.path.join(params.main_data_dir, params.dataset_dir, params.vocab_file)
+    params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
 
     # 将文件中的输出转化为二维list
-    train_input_sentences = load_dataset(train_input)
-    train_output_sentences = load_dataset(train_output)
-    train_answers = load_answer(train_answer_start, train_answer_end)
-    dev_input_sentences = load_dataset(dev_input)
-    dev_output_sentences = load_dataset(dev_output)
-    dev_answers = load_answer(dev_answer_start, dev_answer_end)
+    train_input_sentences = load_dataset(params.train_input)
+    train_output_sentences = load_dataset(params.train_output)
+    train_answers = load_answer(params.train_answer_start, params.train_answer_end)
+    dev_input_sentences = load_dataset(params.dev_input)
+    dev_output_sentences = load_dataset(params.dev_output)
+    dev_answers = load_answer(params.dev_answer_start, params.dev_answer_end)
 
     # 需要保证[输入句子/输出句子/答案]数量一致
     assert len(train_input_sentences) == len(train_output_sentences) == len(train_answers)
     assert len(dev_input_sentences) == len(dev_output_sentences) == len(dev_answers)
 
     # 构造vocab
-    vocab = build_vocab(train_input_sentences + train_output_sentences + dev_input_sentences + dev_output_sentences, vocab_dir)
+    vocab = build_vocab(train_input_sentences + train_output_sentences + dev_input_sentences + dev_output_sentences,
+                        params.vocab_file)
 
     # 将单词转化为index
     train_input_indices = convert_sentence2index(train_input_sentences, vocab)
@@ -182,6 +183,7 @@ if __name__ == '__main__':
     dev_input_indices = convert_sentence2index(dev_input_sentences, vocab)
     dev_output_indices = convert_sentence2index(dev_output_sentences, vocab)
 
+    # 构造数据,输出到临时的pt文件中
     data = {
         'vocab' : vocab,
         'train_input_indices' : train_input_indices,
@@ -189,4 +191,4 @@ if __name__ == '__main__':
         'dev_input_indices' : dev_input_indices,
         'dev_output_indices' : dev_output_indices,
     }
-    torch.save(data, output_dir)
+    torch.save(data, params.temp_pt_file)

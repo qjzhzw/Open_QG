@@ -1,40 +1,29 @@
 load_dataset(){
-    python load_dataset.py \
-    --main_data_dir data \
-    --data_dir squad
+    python load_dataset.py
 }
 
 preprocess(){
-    python preprocess.py \
-    --main_data_dir data \
-    --data_dir squad \
-    --train_input train/sentence.txt \
-    --train_output train/question.txt \
-    --train_answer_start train/answer_start.txt \
-    --train_answer_end train/answer_end.txt \
-    --dev_input dev/sentence.txt \
-    --dev_output dev/question.txt \
-    --dev_answer_start dev/answer_start.txt \
-    --dev_answer_end dev/answer_end.txt \
-    --vocab_dir vocab.txt \
-    --output_dir output.pt
+    python preprocess.py
 }
 
 train(){
-    python train.py \
-    --main_data_dir data \
-    --data_dir squad \
-    --input_dir output.pt \
-    --cuda True \
-    --num_workers 0 \
-    --batch_size 32 \
-    --learning_rate 0.1 \
-    --num_epochs 10 \
-    --embedding_size 512
+    python train.py
 }
 
 if [ ! -n "$1" ] || [ ! -n "$2" ]; then
-    echo "请输入指定的参数 1.运行模式 2.指定GPU"
+    echo "
+    请输入指定的参数 1.运行模式 2.指定GPU
+
+    指定运行模式包括：
+    0: 加载数据集（基本完成）
+    1: 数据预处理（基本完成）
+    2: 模型训练（正在进行）
+    3: 模型测试（尚未完成）
+    4: 模型评估（尚未完成）
+    
+    指定GPU：
+    使用第几块GPU，若当前无可用GPU会自动转换为CPU模式
+    "
 else
     export CUDA_VISIBLE_DEVICES=$2
     if [ $(echo $1 | grep "0") != "" ]; then

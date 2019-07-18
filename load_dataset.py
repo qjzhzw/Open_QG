@@ -89,33 +89,33 @@ if __name__ == '__main__':
     # 加载参数
     parser = argparse.ArgumentParser()
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
-    parser.add_argument('--data_dir', type=str, default='squad', help='需要处理的数据所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
     params = parser.parse_args()
 
     # 判断子目录train/dev/test是否存在，若不存在则创建
-    train_dir = os.path.join(params.main_data_dir, params.data_dir, 'train')
-    dev_dir = os.path.join(params.main_data_dir, params.data_dir, 'dev')
-    test_dir = os.path.join(params.main_data_dir, params.data_dir, 'test')
-    if not os.path.exists(train_dir):
-        os.makedirs(train_dir)
-    if not os.path.exists(dev_dir):
-        os.makedirs(dev_dir)
-    if not os.path.exists(test_dir):
-        os.makedirs(test_dir)
+    params.train_dir = os.path.join(params.main_data_dir, params.dataset_dir, 'train')
+    params.dev_dir = os.path.join(params.main_data_dir, params.dataset_dir, 'dev')
+    params.test_dir = os.path.join(params.main_data_dir, params.dataset_dir, 'test')
+    if not os.path.exists(params.train_dir):
+        os.makedirs(params.train_dir)
+    if not os.path.exists(params.dev_dir):
+        os.makedirs(params.dev_dir)
+    if not os.path.exists(params.test_dir):
+        os.makedirs(params.test_dir)
 
     # 加载数据集
-    load_dataset(os.path.join(params.main_data_dir, params.data_dir, 'origin/train_sent_pre.json'),
-                os.path.join(params.main_data_dir, params.data_dir, 'train/sentence.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'train/question.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'train/answer_start.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'train/answer_end.txt'))
-    load_dataset(os.path.join(params.main_data_dir, params.data_dir, 'origin/dev_sent_pre.json'),
-                os.path.join(params.main_data_dir, params.data_dir, 'dev/sentence.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'dev/question.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'dev/answer_start.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'dev/answer_end.txt'))
-    load_dataset(os.path.join(params.main_data_dir, params.data_dir, 'origin/test_sent_pre.json'),
-                os.path.join(params.main_data_dir, params.data_dir, 'test/sentence.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'test/question.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'test/answer_start.txt'),
-                os.path.join(params.main_data_dir, params.data_dir, 'test/answer_end.txt'))
+    load_dataset(os.path.join(params.main_data_dir, params.dataset_dir, 'origin/train_sent_pre.json'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'train/sentence.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'train/question.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'train/answer_start.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'train/answer_end.txt'))
+    load_dataset(os.path.join(params.main_data_dir, params.dataset_dir, 'origin/dev_sent_pre.json'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'dev/sentence.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'dev/question.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'dev/answer_start.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'dev/answer_end.txt'))
+    load_dataset(os.path.join(params.main_data_dir, params.dataset_dir, 'origin/test_sent_pre.json'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'test/sentence.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'test/question.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'test/answer_start.txt'),
+                os.path.join(params.main_data_dir, params.dataset_dir, 'test/answer_end.txt'))
