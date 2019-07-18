@@ -1,10 +1,12 @@
 # 开源QG系统(Question Generation,问题生成)
 ### 正在开发，尚未完成，敬请期待
 
+
 ## 系统基本介绍
 使用Python版本 : Python3.6(其中模型评估部分脚本基本Python2.7)  
 使用深度学习框架 : Pytorch0.4.1  
 使用seq2seq模型结构 : Transformer(详情参考论文《Attention Is All You Need》)  
+
 
 ## 代码运行方式：
 `sh pipeline.sh [指定运行模式] [指定GPU]`  
@@ -23,6 +25,7 @@
 
 ### 指定GPU：
 使用第几块GPU，若当前无可用GPU会自动转换为CPU模式  
+
 
 ## 文件结构介绍：
 #### 文件夹:
