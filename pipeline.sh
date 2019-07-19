@@ -11,7 +11,7 @@ preprocess(){
 }
 
 train(){
-    python train.py --num_epochs 1
+    python train.py
 }
 
 test(){

@@ -8,6 +8,7 @@ import shutil
 import torch
 import torch.nn as nn
 import torch.utils.data
+from tqdm import tqdm
 
 from vocab import Vocab
 from dataset import Dataset, collate_fn
@@ -138,7 +139,7 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
     sentences_pred = []
 
     # 每一个batch的训练
-    for batch_index, batch in enumerate(loader):
+    for batch_index, batch in enumerate(tqdm(loader)):
         # 从数据中读取模型的输入和输出
         input_indices = batch[0]
         output_indices = batch[1]
@@ -174,7 +175,10 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         # output_indices_pred: [batch_size, vocab_size, output_seq_len]
         # output_indices_gold: [batch_size, output_seq_len]
         loss = criterion(output_indices_pred, output_indices_gold)
-        logger.info('Epoch : {}, batch : {}/{}, loss : {}'.format(epoch, batch_index, len(loader), loss))
+
+        # 如果参数中设置了打印模型损失,则打印模型损失
+        if params.print_loss:
+            logger.info('Epoch : {}, batch : {}/{}, loss : {}'.format(epoch, batch_index, len(loader), loss))
 
         # 如果是训练阶段,就利用优化器进行BP反向传播,更新参数
         if mode == 'train':
@@ -217,12 +221,20 @@ if __name__ == '__main__':
     parser.add_argument('--gold_file', type=str, default='gold.txt', help='用于比较的真实文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--print_model', type=bool, default=True, help='是否打印出模型结构')
-    parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
+    parser.add_argument('--load_model', type=bool, default=False, help='是否加载训练好的模型参数')
+    parser.add_argument('--print_loss', type=bool, default=True, help='是否打印出训练过程中的损失')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
-    parser.add_argument('--embedding_size', type=int, default=512, help='模型超参数:embedding_size')
+    parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度)')
+    parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
+    parser.add_argument('--num_heads', type=int, default=8, help='transformer模型超参数:num_heads')
+    parser.add_argument('--d_model', type=int, default=512, help='transformer模型超参数:d_model')
+    parser.add_argument('--d_k', type=int, default=64, help='transformer模型超参数:d_k')
+    parser.add_argument('--d_v', type=int, default=64, help='transformer模型超参数:d_v')
+    parser.add_argument('--d_ff', type=int, default=2048, help='transformer模型超参数:d_ff')
+    parser.add_argument('--dropout', type=int, default=10, help='transformer模型超参数:dropout')
     params = parser.parse_args()
 
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
