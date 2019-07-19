@@ -227,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
-    parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度)')
+    parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
     parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
     parser.add_argument('--num_heads', type=int, default=8, help='transformer模型超参数:num_heads')
     parser.add_argument('--d_model', type=int, default=512, help='transformer模型超参数:d_model')
