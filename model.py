@@ -67,10 +67,10 @@ class Encoder(nn.Module):
         '''
 
         # 构造掩膜和位置信息
-        input_indices_masks = self.mask_and_position.build_masks(input_indices).unsqueeze(2)
         input_indices_positions = self.mask_and_position.build_positions(input_indices)
-        # input_indices_masks: [batch_size, input_seq_len, 1]
+        input_indices_pad_masks = self.mask_and_position.build_pad_masks(input_indices).unsqueeze(2)
         # input_indices_positions: [batch_size, input_seq_len]
+        # input_indices_pad_masks: [batch_size, input_seq_len, 1]
 
         # 将索引/位置信息转换为词向量
         input_indices = self.word_embedding_encoder(input_indices) + self.position_embedding_encoder(input_indices)
@@ -78,7 +78,7 @@ class Encoder(nn.Module):
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for encoder_layer in self.encoder_layers:
-            input_indices = encoder_layer(input_indices, input_indices_masks)
+            input_indices = encoder_layer(input_indices, input_indices_pad_masks)
         # input_indices: [batch_size, input_seq_len, d_model]
 
         # # 测试所使用GRU
@@ -126,10 +126,12 @@ class Decoder(nn.Module):
         '''
 
         # 构造掩膜和位置信息
-        output_indices_masks = self.mask_and_position.build_masks(output_indices).unsqueeze(2)
         output_indices_positions = self.mask_and_position.build_positions(output_indices)
-        # output_indices_masks: [batch_size, output_seq_len, 1]
+        output_indices_pad_masks = self.mask_and_position.build_pad_masks(output_indices).unsqueeze(2)
+        output_indices_triu_masks = self.mask_and_position.build_triu_masks(output_indices)
         # output_indices_positions: [batch_size, output_seq_len]
+        # output_indices_pad_masks: [batch_size, output_seq_len, 1]
+        # output_indices_triu_masks: [batch_size, output_seq_len, output_seq_len]
 
         # 将索引/位置信息转换为词向量
         output_indices = self.word_embedding_decoder(output_indices) + self.position_embedding_decoder(output_indices)
@@ -137,7 +139,7 @@ class Decoder(nn.Module):
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for decoder_layer in self.decoder_layers:
-            output_indices = decoder_layer(output_indices, input_indices, output_indices_masks)
+            output_indices = decoder_layer(output_indices, input_indices, output_indices_pad_masks, output_indices_triu_masks)
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
@@ -176,10 +178,10 @@ class Encoder_layer(nn.Module):
         # FFN结构
         self.feedforward_network = Feedforward_network(self.params)
 
-    def forward(self, input_indices, input_indices_masks):
+    def forward(self, input_indices, input_indices_pad_masks):
         '''
         input_indices: [batch_size, input_seq_len, d_model]
-        input_indices_masks: [batch_size, input_seq_len, 1]
+        input_indices_pad_masks: [batch_size, input_seq_len, 1]
         return input_indices: [batch_size, input_seq_len, d_model]
         '''
 
@@ -187,12 +189,12 @@ class Encoder_layer(nn.Module):
         input_indices = self.self_attention(query=input_indices,
                                             key=input_indices,
                                             value=input_indices)
-        input_indices *= input_indices_masks
+        input_indices *= input_indices_pad_masks
         # input_indices: [batch_size, input_seq_len, d_model]
 
         # 经过FFN结构
         input_indices = self.feedforward_network(input_indices)
-        input_indices *= input_indices_masks
+        input_indices *= input_indices_pad_masks
         # input_indices: [batch_size, input_seq_len, d_model]
 
         return input_indices
@@ -216,11 +218,12 @@ class Decoder_layer(nn.Module):
         # FFN结构
         self.feedforward_network = Feedforward_network(self.params)
 
-    def forward(self, output_indices, input_indices, output_indices_masks):
+    def forward(self, output_indices, input_indices, output_indices_pad_masks, output_indices_triu_masks):
         '''
         output_indices: [batch_size, output_seq_len, d_model]
         input_indices: [batch_size, input_seq_len, d_model]
-        output_indices_masks: [batch_size, output_seq_len, 1]
+        output_indices_pad_masks: [batch_size, output_seq_len, 1]
+        output_indices_triu_masks: [batch_size, output_seq_len, output_seq_len]
         return output_indices: [batch_size, output_seq_len, d_model]
         '''
 
@@ -228,19 +231,19 @@ class Decoder_layer(nn.Module):
         output_indices = self.self_attention(query=output_indices,
                                              key=output_indices,
                                              value=output_indices)
-        output_indices *= output_indices_masks
+        output_indices *= output_indices_pad_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过mutual_attention结构
         output_indices = self.mutual_attention(query=output_indices,
                                                key=input_indices,
                                                value=input_indices)
-        output_indices *= output_indices_masks
+        output_indices *= output_indices_pad_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过FFN结构
         output_indices = self.feedforward_network(output_indices)
-        output_indices *= output_indices_masks
+        output_indices *= output_indices_pad_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         return output_indices
@@ -372,9 +375,33 @@ class Mask_and_position():
     def __init__(self, params):
         self.params = params
 
-    def build_masks(self, indices):
+    def build_positions(self, indices):
         '''
         indices: [batch_size, seq_len]
+        return indices_positions: [batch_size, seq_len]
+        '''
+
+        # 构造位置信息,位置从1开始
+        indices_positions = []
+        for indice in indices:
+            indice_position = []
+            for position, index in enumerate(indice):
+                indice_position.append(position)
+            indices_positions.append(indice_position)
+
+        # 将二维list的batch直接转换为tensor的形式
+        indices_positions = torch.tensor(indices_positions).float()
+
+        # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
+        if self.params.cuda:
+            indices_positions = indices_positions.cuda()
+
+        return indices_positions
+
+    def build_pad_masks(self, indices):
+        '''
+        indices: [batch_size, seq_len]
+        return indices_masks: [batch_size, seq_len]
         '''
 
         # 构造掩膜,是序列的部分填1,非序列的部分填0
@@ -397,24 +424,29 @@ class Mask_and_position():
 
         return indices_masks
 
-    def build_positions(self, indices):
+    def build_triu_masks(self, indices):
         '''
         indices: [batch_size, seq_len]
+        return indices_triu_masks: [batch_size, seq_len, seq_len]
         '''
 
-        # 构造位置信息,位置从1开始
-        indices_positions = []
-        for indice in indices:
-            indice_position = []
-            for position, index in enumerate(indice):
-                indice_position.append(position)
-            indices_positions.append(indice_position)
+        batch_size = indices.size(0)
+        seq_len = indices.size(1)
 
-        # 将二维list的batch直接转换为tensor的形式
-        indices_positions = torch.tensor(indices_positions).float()
+        # 构造一个全为1的tensor
+        indices_ones_masks = torch.ones(seq_len, seq_len).float()
+
+        # 构造成上三角矩阵,即右上均为1
+        indices_triu_masks = torch.triu(indices_ones_masks)
+
+        # 构造成下三角矩阵,即左下均为1
+        indices_triu_masks = indices_ones_masks - indices_triu_masks
+
+        # 重复batch_size次
+        indices_triu_masks = indices_triu_masks.unsqueeze(0).repeat(batch_size, 1, 1)
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
         if self.params.cuda:
-            indices_positions = indices_positions.cuda()
+            indices_triu_masks = indices_triu_masks.cuda()
 
-        return indices_positions
+        return indices_triu_masks
