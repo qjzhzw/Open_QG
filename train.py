@@ -83,21 +83,28 @@ def train_model(train_loader, dev_loader, vocab, params):
     # 定义优化器
     optimizer = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
 
+    # 存储每一轮验证集的损失,根据验证集损失最小来挑选最好的模型进行保存
+    total_loss_epochs = []
+
     # 每一轮的训练和验证
     for epoch in range(params.num_epochs):
         # 一轮模型训练
-        model, _, total_loss = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
+        model, _, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
         # 一轮模型验证
         model, sentences_pred, total_loss = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
+
+        # 存储每一轮验证集的损失
+        total_loss_epochs.append(total_loss)
 
         # 将预测结果存入本地文件
         if not os.path.exists(params.output_dir):
             os.makedirs(params.output_dir)
+        # 依次写入文件
         f_pred = open(params.pred_file, 'w')
         for sentence_pred in sentences_pred:
             f_pred.write(sentence_pred + '\n')
         f_pred.close()
-        logger.info('第{}轮的预测结果已经保存至{},验证集总损失为{}'.format(epoch, params.pred_file, total_loss))
+        logger.info('第{}轮的预测结果已经保存至{},验证集总损失为{},当前最好模型的损失为{}'.format(epoch, params.pred_file, total_loss, max(total_loss_epochs)))
 
         # 原始的真实输出文件,需要从数据目录移动到输出目录下,用于和预测结果进行比较
         shutil.copyfile(params.origin_gold_file, params.gold_file)
@@ -108,8 +115,10 @@ def train_model(train_loader, dev_loader, vocab, params):
         # 将训练好的模型参数存入本地文件
         if not os.path.exists(params.checkpoint_dir):
             os.makedirs(params.checkpoint_dir)
-        torch.save(model.state_dict(), params.checkpoint_file)
-        logger.info('第{}轮的模型参数已经保存至{}'.format(epoch, params.checkpoint_file))
+        # 根据验证集损失最小来挑选最好的模型进行保存
+        if total_loss == max(total_loss_epochs):
+            torch.save(model.state_dict(), params.checkpoint_file)
+            logger.info('第{}轮的模型参数已经保存至{}'.format(epoch, params.checkpoint_file))
 
 
 def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
@@ -124,6 +133,7 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
           dev表示是验证阶段
     return model: 训练/验证结束时得到的模型
     return sentences_pred: 验证结束时得到的预测序列集合(只有验证时有内容,训练时为空list)
+    return total_loss: 总损失
     '''
     # 断言: mode值一定在['train', 'dev']范围内
     assert mode in ['train', 'dev']

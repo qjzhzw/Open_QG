@@ -18,6 +18,13 @@ class Vocab():
     # 必选项:单词,索引
     # 可选性:词频,词向量
     def add_element(self, word, index, freq=None, embedding=None):
+        '''
+        word: 需要添加元素的单词
+        index: 需要添加元素的索引
+        freq: 需要添加元素的词频(可选)
+        embedding: 需要添加元素的词向量(可选)
+        '''
+
         self.vocab.append(Vocab_element(word, index, freq, embedding))
         self.word2index[word] = index
         self.index2word[index] = word
@@ -28,10 +35,43 @@ class Vocab():
 
     # 判断Vocab类中是否包含某个单词
     def has_word(self, word):
+        '''
+        word: 输入单词
+        '''
+
         if word in self.word2index.keys():
             return True
         else:
             return False
+
+    # 将一个单词转换为索引
+    def convert_word2index(self, word):
+        '''
+        word: 输入单词
+        return index: 输出索引
+        '''
+
+        # 如果vocab中包含这个单词,则返回该单词的索引,否则返回<unk>的索引
+        index = None
+        if self.has_word(word):
+            index = self.word2index[word]
+        else:
+            index = self.word2index['<unk>']
+        return index
+
+    def convert_index2word(self, index):
+        '''
+        index: 输入索引
+        return index: 输出单词
+        '''
+
+        # 如果索引是合法的(即小于vocab的大小),则返回该索引的单词,否则返回<unk>
+        word = None
+        if vocab >= 0 and vocab < len(self):
+            word = self.index2word[index]
+        else:
+            word = '<unk>'
+        return word
 
     # 将一个句子,从单词序列转换为索引形式
     def convert_sentence2index(self, sentence):
@@ -47,7 +87,7 @@ class Vocab():
         # 通过遍历的方式,将单词序列转换为索引形式
         indices = []
         for word in sentence:
-            indices.append(self.word2index[word])
+            indices.append(self.convert_word2index(word))
         return indices
 
     # 将一个句子,从索引序列转换为单词形式
@@ -67,10 +107,10 @@ class Vocab():
         sentence = []
         for index in indices:
             # 在mode为True时,遇到</s>就停止
-            if index == self.word2index['</s>'] and mode == False:
+            if index == self.convert_word2index('</s>') and mode == False:
                 break
             else:
-                sentence.append(self.index2word[index])
+                sentence.append(self.convert_index2word(index))
         return sentence
 
 

@@ -22,9 +22,8 @@ def load_dataset(origin_file):
     # 将原始数据加载进来
     instances = open(origin_file, 'r').readlines()
 
-    sentences = []
-
     # 依次处理所有数据
+    sentences = []
     for instance in instances:
         words = instance.strip().split()
         sentence = ['<s>'] + words + ['</s>']
@@ -52,9 +51,8 @@ def load_answer(answer_start_file, answer_end_file):
     assert len(answer_starts) == len(answer_ends)
     len_answer = len(answer_starts)
 
-    answers = []
-
     # 依次处理所有数据
+    answers = []
     for i in range(len_answer):
         answer_start = int(answer_starts[i].strip())
         answer_end = int(answer_ends[i].strip())
@@ -145,6 +143,10 @@ if __name__ == '__main__':
     parser.add_argument('--dev_output', type=str, default='dev/question.txt', help='验证集输出')
     parser.add_argument('--dev_answer_start', type=str, default='dev/answer_start.txt', help='验证集答案开始位置')
     parser.add_argument('--dev_answer_end', type=str, default='dev/answer_end.txt', help='验证集答案结束位置')
+    parser.add_argument('--test_input', type=str, default='test/sentence.txt', help='验证集输入')
+    parser.add_argument('--test_output', type=str, default='test/question.txt', help='验证集输出')
+    parser.add_argument('--test_answer_start', type=str, default='test/answer_start.txt', help='验证集答案开始位置')
+    parser.add_argument('--test_answer_end', type=str, default='test/answer_end.txt', help='验证集答案结束位置')
     parser.add_argument('--vocab_file', type=str, default='vocab.txt', help='vocab位置')
     parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='输出的pt文件位置')
     params = parser.parse_args()
@@ -157,6 +159,10 @@ if __name__ == '__main__':
     params.dev_output = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_output)
     params.dev_answer_start = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_answer_start)
     params.dev_answer_end = os.path.join(params.main_data_dir, params.dataset_dir, params.dev_answer_end)
+    params.test_input = os.path.join(params.main_data_dir, params.dataset_dir, params.test_input)
+    params.test_output = os.path.join(params.main_data_dir, params.dataset_dir, params.test_output)
+    params.test_answer_start = os.path.join(params.main_data_dir, params.dataset_dir, params.test_answer_start)
+    params.test_answer_end = os.path.join(params.main_data_dir, params.dataset_dir, params.test_answer_end)
     params.vocab_file = os.path.join(params.main_data_dir, params.dataset_dir, params.vocab_file)
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
 
@@ -167,10 +173,14 @@ if __name__ == '__main__':
     dev_input_sentences = load_dataset(params.dev_input)
     dev_output_sentences = load_dataset(params.dev_output)
     dev_answers = load_answer(params.dev_answer_start, params.dev_answer_end)
+    test_input_sentences = load_dataset(params.test_input)
+    test_output_sentences = load_dataset(params.test_output)
+    test_answers = load_answer(params.test_answer_start, params.test_answer_end)
 
     # 需要保证[输入句子/输出句子/答案]数量一致
     assert len(train_input_sentences) == len(train_output_sentences) == len(train_answers)
     assert len(dev_input_sentences) == len(dev_output_sentences) == len(dev_answers)
+    assert len(test_input_sentences) == len(test_output_sentences) == len(test_answers)
 
     # 构造vocab
     vocab = build_vocab(train_input_sentences + train_output_sentences + dev_input_sentences + dev_output_sentences,
@@ -181,6 +191,8 @@ if __name__ == '__main__':
     train_output_indices = convert_sentence2index(train_output_sentences, vocab)
     dev_input_indices = convert_sentence2index(dev_input_sentences, vocab)
     dev_output_indices = convert_sentence2index(dev_output_sentences, vocab)
+    test_input_indices = convert_sentence2index(test_input_sentences, vocab)
+    test_output_indices = convert_sentence2index(test_output_sentences, vocab)
 
     # 构造数据,输出到临时的pt文件中
     data = {
@@ -189,5 +201,7 @@ if __name__ == '__main__':
         'train_output_indices' : train_output_indices,
         'dev_input_indices' : dev_input_indices,
         'dev_output_indices' : dev_output_indices,
+        'test_input_indices' : test_input_indices,
+        'test_output_indices' : test_output_indices,
     }
     torch.save(data, params.temp_pt_file)
