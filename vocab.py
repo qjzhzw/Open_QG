@@ -67,7 +67,7 @@ class Vocab():
 
         # 如果索引是合法的(即小于vocab的大小),则返回该索引的单词,否则返回<unk>
         word = None
-        if vocab >= 0 and vocab < len(self):
+        if index >= 0 and index < len(self):
             word = self.index2word[index]
         else:
             word = '<unk>'
