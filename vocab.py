@@ -35,6 +35,11 @@ class Vocab():
 
     # 将一个句子,从单词序列转换为索引形式
     def convert_sentence2index(self, sentence):
+        '''
+        sentence: 输入单词序列
+        return indices: 输出索引序列
+        '''
+
         # 如果输入是tensor形式,转换为numpy形式
         if torch.is_tensor(sentence):
             sentence = sentence.cpu().numpy()
@@ -46,7 +51,14 @@ class Vocab():
         return indices
 
     # 将一个句子,从索引序列转换为单词形式
-    def convert_index2sentence(self, indices):
+    def convert_index2sentence(self, indices, mode=False):
+        '''
+        indices: 输入索引序列
+        mode: True表示输出完整序列
+              False表示遇到</s>就停止(只输出到</s>前的序列)
+        return sentence: 输出单词序列
+        '''
+
         # 如果输入是tensor形式,转换为numpy形式
         if torch.is_tensor(indices):
             indices = indices.cpu().numpy()
@@ -54,11 +66,11 @@ class Vocab():
         # 通过遍历的方式,将单词序列转换为索引形式
         sentence = []
         for index in indices:
-            # 遇到</s>就停止
-            if index != self.word2index['</s>']:
-                sentence.append(self.index2word[index])
-            else:
+            # 在mode为True时,遇到</s>就停止
+            if index == self.word2index['</s>'] and mode == False:
                 break
+            else:
+                sentence.append(self.index2word[index])
         return sentence
 
 

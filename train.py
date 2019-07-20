@@ -86,9 +86,9 @@ def train_model(train_loader, dev_loader, vocab, params):
     # 每一轮的训练和验证
     for epoch in range(params.num_epochs):
         # 一轮模型训练
-        model, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
+        model, _, total_loss = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
         # 一轮模型验证
-        model, sentences_pred = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
+        model, sentences_pred, total_loss = one_epoch(model, optimizer, epoch, dev_loader, vocab, params, mode='dev')
 
         # 将预测结果存入本地文件
         if not os.path.exists(params.output_dir):
@@ -97,7 +97,7 @@ def train_model(train_loader, dev_loader, vocab, params):
         for sentence_pred in sentences_pred:
             f_pred.write(sentence_pred + '\n')
         f_pred.close()
-        logger.info('第{}轮的预测结果已经保存至{}'.format(epoch, params.pred_file))
+        logger.info('第{}轮的预测结果已经保存至{},验证集总损失为{}'.format(epoch, params.pred_file, total_loss))
 
         # 原始的真实输出文件,需要从数据目录移动到输出目录下,用于和预测结果进行比较
         shutil.copyfile(params.origin_gold_file, params.gold_file)
@@ -127,7 +127,6 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
     '''
     # 断言: mode值一定在['train', 'dev']范围内
     assert mode in ['train', 'dev']
-
     if mode == 'train':
         logger.info('训练第{}轮'.format(epoch))
         model.train()
@@ -137,8 +136,12 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
 
     # 对于验证阶段,我们保存所有得到的输出序列
     sentences_pred = []
+    # 记录训练/验证的总样例数
+    total_examples = 0
+    # 记录训练/验证的总损失
+    total_loss = 0
 
-    # 每一个batch的训练
+    # 每一个batch的训练/验证
     for batch_index, batch in enumerate(tqdm(loader)):
         # 从数据中读取模型的输入和输出
         input_indices = batch[0]
@@ -163,6 +166,8 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         output_indices = output_indices[:, :-1]
 
         # 将输入数据导入模型,得到预测的输出数据
+        # input_indices: [batch_size, input_seq_len]
+        # output_indices: [batch_size, output_seq_len]
         output_indices_pred = model(input_indices, output_indices)
 
         # 定义损失函数
@@ -176,6 +181,11 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         # output_indices_gold: [batch_size, output_seq_len]
         loss = criterion(output_indices_pred, output_indices_gold)
 
+        # 计算到当前为止的总样例数和总损失
+        num_examples = input_indices.size(0)
+        total_examples += num_examples
+        total_loss += loss.item() * num_examples
+
         # 如果参数中设置了打印模型损失,则打印模型损失
         if params.print_loss:
             logger.info('Epoch : {}, batch : {}/{}, loss : {}'.format(epoch, batch_index, len(loader), loss))
@@ -187,17 +197,21 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
             optimizer.step()
 
         # 如果是验证阶段,给出预测的序列
-        if mode == 'dev':
+        if mode == 'train':
             # 将基于vocab的概率分布,通过取最大值的方式得到预测的输出序列
             output_indices_pred = output_indices_pred.permute(0, 2, 1)
             indices_pred = torch.max(output_indices_pred, dim=-1)[1]
 
             # 输出预测序列
             for indices in indices_pred:
-                sentence = vocab.convert_index2sentence(indices)
+                sentence = vocab.convert_index2sentence(indices, mode=True)
                 sentences_pred.append(' '.join(sentence))
+            print(sentence)
 
-    return model, sentences_pred
+    # 计算总损失
+    total_loss = total_loss / total_examples
+
+    return model, sentences_pred, total_loss
 
 
 if __name__ == '__main__':
@@ -234,7 +248,7 @@ if __name__ == '__main__':
     parser.add_argument('--d_k', type=int, default=64, help='transformer模型超参数:d_k')
     parser.add_argument('--d_v', type=int, default=64, help='transformer模型超参数:d_v')
     parser.add_argument('--d_ff', type=int, default=2048, help='transformer模型超参数:d_ff')
-    parser.add_argument('--dropout', type=int, default=10, help='transformer模型超参数:dropout')
+    parser.add_argument('--dropout', type=float, default=0.1, help='transformer模型超参数:dropout')
     params = parser.parse_args()
 
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)

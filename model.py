@@ -47,11 +47,18 @@ class Encoder(nn.Module):
         self.vocab = vocab
         self.vocab_size = len(self.vocab)
 
-        # embedding层,将索引转换为词向量
-        self.embedder = nn.Embedding(self.vocab_size, self.params.d_model)
+        # 构造掩膜和位置信息
+        self.mask_and_position = Mask_and_position(self.params)
+
+        # embedding层,将索引/位置信息转换为词向量
+        self.word_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
+        self.position_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
 
         # 多个相同子结构组成的encoder子层,层数为num_layers
-        self.encoder_layers = nn.ModuleList([Encoder_layer(params) for _ in range(params.num_layers)])
+        self.encoder_layers = nn.ModuleList([Encoder_layer(self.params) for _ in range(self.params.num_layers)])
+
+        # 测试所使用GRU
+        self.GRU_encoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
 
     def forward(self, input_indices):
         '''
@@ -59,13 +66,26 @@ class Encoder(nn.Module):
         return input_indices: [batch_size, input_seq_len]
         '''
 
-        # 将索引转换为词向量
-        input_indices = self.embedder(input_indices)
+        # 构造掩膜和位置信息
+        input_indices_masks = self.mask_and_position.build_masks(input_indices).unsqueeze(2)
+        input_indices_positions = self.mask_and_position.build_positions(input_indices)
+        # input_indices_masks: [batch_size, input_seq_len, 1]
+        # input_indices_positions: [batch_size, input_seq_len]
+
+        # 将索引/位置信息转换为词向量
+        input_indices = self.word_embedding_encoder(input_indices) + self.position_embedding_encoder(input_indices)
         # input_indices: [batch_size, input_seq_len, d_model]
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for encoder_layer in self.encoder_layers:
-            input_indices = encoder_layer(input_indices)
+            input_indices = encoder_layer(input_indices, input_indices_masks)
+        # input_indices: [batch_size, input_seq_len, d_model]
+
+        # # 测试所使用GRU
+        # input_indices = self.word_embedding_encoder(input_indices)
+        # # input_indices: [batch_size, input_seq_len, d_model]
+        # input_indices, _ = self.GRU_encoder(input_indices)
+        # # input_indices: [batch_size, input_seq_len, d_model]
 
         return input_indices
 
@@ -82,34 +102,61 @@ class Decoder(nn.Module):
         self.vocab = vocab
         self.vocab_size = len(self.vocab)
 
-        # embedding层,将索引转换为词向量
-        self.embedder = nn.Embedding(self.vocab_size, self.params.d_model)
+        # 构造掩膜和位置信息
+        self.mask_and_position = Mask_and_position(self.params)
+
+        # embedding层,将索引/位置信息转换为词向量
+        self.word_embedding_decoder = nn.Embedding(self.vocab_size, self.params.d_model)
+        self.position_embedding_decoder = nn.Embedding(self.vocab_size, self.params.d_model)
 
         # 多个相同子结构组成的decoder子层,层数为num_layers
-        self.decoder_layers = nn.ModuleList([Decoder_layer(params) for _ in range(params.num_layers)])
+        self.decoder_layers = nn.ModuleList([Decoder_layer(self.params) for _ in range(self.params.num_layers)])
 
         # 输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         self.output = nn.Linear(self.params.d_model, self.vocab_size)
 
+        # 测试所使用GRU
+        self.GRU_decoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
+
     def forward(self, output_indices, input_indices):
         '''
         output_indices: [batch_size, output_seq_len]
+        input_indices: [batch_size, input_seq_len, d_model]
         return output_indices: [batch_size, vocab_size, output_seq_len]
         '''
 
-        # 将索引转换为词向量
-        output_indices = self.embedder(output_indices)
+        # 构造掩膜和位置信息
+        output_indices_masks = self.mask_and_position.build_masks(output_indices).unsqueeze(2)
+        output_indices_positions = self.mask_and_position.build_positions(output_indices)
+        # output_indices_masks: [batch_size, output_seq_len, 1]
+        # output_indices_positions: [batch_size, output_seq_len]
+
+        # 将索引/位置信息转换为词向量
+        output_indices = self.word_embedding_decoder(output_indices) + self.position_embedding_decoder(output_indices)
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for decoder_layer in self.decoder_layers:
-            output_indices = decoder_layer(output_indices, input_indices)
+            output_indices = decoder_layer(output_indices, input_indices, output_indices_masks)
+        # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         output_indices = self.output(output_indices)
         # output_indices: [batch_size, output_seq_len, vocab_size]
         output_indices = output_indices.permute(0, 2, 1)
         # output_indices: [batch_size, vocab_size, output_seq_len]
+
+        # # 测试所使用GRU
+        # output_indices = self.word_embedding_decoder(output_indices)
+        # # output_indices: [batch_size, output_seq_len, d_model]
+        # input_indices = input_indices[:, 0, :].unsqueeze(0).contiguous()
+        # # input_indices: [1, batch_size, d_model]
+        # output_indices, _ = self.GRU_decoder(output_indices, input_indices)
+        # # output_indices: [batch_size, output_seq_len, d_model]
+        # output_indices = self.output(output_indices)
+        # # output_indices: [batch_size, output_seq_len, vocab_size]
+        # output_indices = output_indices.permute(0, 2, 1)
+        # # output_indices: [batch_size, vocab_size, output_seq_len]
 
         return output_indices
 
@@ -129,9 +176,10 @@ class Encoder_layer(nn.Module):
         # FFN结构
         self.feedforward_network = Feedforward_network(self.params)
 
-    def forward(self, input_indices):
+    def forward(self, input_indices, input_indices_masks):
         '''
         input_indices: [batch_size, input_seq_len, d_model]
+        input_indices_masks: [batch_size, input_seq_len, 1]
         return input_indices: [batch_size, input_seq_len, d_model]
         '''
 
@@ -139,10 +187,12 @@ class Encoder_layer(nn.Module):
         input_indices = self.self_attention(query=input_indices,
                                             key=input_indices,
                                             value=input_indices)
+        input_indices *= input_indices_masks
         # input_indices: [batch_size, input_seq_len, d_model]
 
         # 经过FFN结构
         input_indices = self.feedforward_network(input_indices)
+        input_indices *= input_indices_masks
         # input_indices: [batch_size, input_seq_len, d_model]
 
         return input_indices
@@ -166,10 +216,11 @@ class Decoder_layer(nn.Module):
         # FFN结构
         self.feedforward_network = Feedforward_network(self.params)
 
-    def forward(self, output_indices, input_indices):
+    def forward(self, output_indices, input_indices, output_indices_masks):
         '''
         output_indices: [batch_size, output_seq_len, d_model]
         input_indices: [batch_size, input_seq_len, d_model]
+        output_indices_masks: [batch_size, output_seq_len, 1]
         return output_indices: [batch_size, output_seq_len, d_model]
         '''
 
@@ -177,16 +228,19 @@ class Decoder_layer(nn.Module):
         output_indices = self.self_attention(query=output_indices,
                                              key=output_indices,
                                              value=output_indices)
+        output_indices *= output_indices_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过mutual_attention结构
         output_indices = self.mutual_attention(query=output_indices,
                                                key=input_indices,
                                                value=input_indices)
+        output_indices *= output_indices_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过FFN结构
         output_indices = self.feedforward_network(output_indices)
+        output_indices *= output_indices_masks
         # output_indices: [batch_size, output_seq_len, d_model]
 
         return output_indices
@@ -209,6 +263,7 @@ class Multihead_attention(nn.Module):
 
         self.linear_o = nn.Linear(self.params.num_heads * self.params.d_v, self.params.d_model)
 
+        self.dropout = nn.Dropout(params.dropout)
         self.layer_norm = nn.LayerNorm(params.d_model)
 
     def forward(self, query, key, value):
@@ -261,6 +316,8 @@ class Multihead_attention(nn.Module):
         indices = self.linear_o(context_vector)
         # indices: [batch_size, seq_len_query, d_model]
 
+        # dropout
+        indices = self.dropout(indices)
         # 残差结构
         indices += residual
         # 层正则化
@@ -282,6 +339,7 @@ class Feedforward_network(nn.Module):
         self.relu_between = nn.ReLU()
         self.linear_FFN_2 = nn.Linear(self.params.d_ff, self.params.d_model)
 
+        self.dropout = nn.Dropout(params.dropout)
         self.layer_norm = nn.LayerNorm(params.d_model)
 
     def forward(self, indices):
@@ -300,9 +358,63 @@ class Feedforward_network(nn.Module):
         indices = self.linear_FFN_2(indices)
         # indices: [batch_size, seq_len, d_model]
 
+        # dropout
+        indices = self.dropout(indices)
         # 残差结构
         indices += residual
         # 层正则化
         indices = self.layer_norm(indices)
 
         return indices
+
+
+class Mask_and_position():
+    def __init__(self, params):
+        self.params = params
+
+    def build_masks(self, indices):
+        '''
+        indices: [batch_size, seq_len]
+        '''
+
+        # 构造掩膜,是序列的部分填1,非序列的部分填0
+        indices_masks = []
+        for indice in indices:
+            indice_mask = []
+            for index in indice:
+                if index == 0:
+                    indice_mask.append(0)
+                else:
+                    indice_mask.append(1)
+            indices_masks.append(indice_mask)
+
+        # 将二维list的batch直接转换为tensor的形式
+        indices_masks = torch.tensor(indices_masks).float()
+
+        # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
+        if self.params.cuda:
+            indices_masks = indices_masks.cuda()
+
+        return indices_masks
+
+    def build_positions(self, indices):
+        '''
+        indices: [batch_size, seq_len]
+        '''
+
+        # 构造位置信息,位置从1开始
+        indices_positions = []
+        for indice in indices:
+            indice_position = []
+            for position, index in enumerate(indice):
+                indice_position.append(position)
+            indices_positions.append(indice_position)
+
+        # 将二维list的batch直接转换为tensor的形式
+        indices_positions = torch.tensor(indices_positions).float()
+
+        # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
+        if self.params.cuda:
+            indices_positions = indices_positions.cuda()
+
+        return indices_positions
