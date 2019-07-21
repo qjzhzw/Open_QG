@@ -37,6 +37,8 @@
 load_dataset.py : 读取原始数据构造成文本形式  
 preprocess.py : 数据预处理  
 train.py : 模型训练+验证  
+test.py : 模型测试
+demo.py : demo测试
 vocab.py : Vocab类(构造任务所使用词表)  
 dataset.py : Dataset类(将数据构造成batch形式)  
 model.py : Model类(Transformer模型)  
