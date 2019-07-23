@@ -58,6 +58,9 @@ if __name__ == '__main__':
 
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
 
+    # 打印参数列表
+    logger.info('参数列表:{}'.format(params))
+
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列
     data = torch.load(params.temp_pt_file)

@@ -46,3 +46,10 @@ model.py : Model类(Transformer模型)
 pipeline.sh 运行脚本  
 #### 其它文件:
 requirements.txt : 需要安装的依赖包及对应版本
+
+
+## 数据下载:
+#### 百度网盘:
+链接: https://pan.baidu.com/s/1JKaHR5mde8GGxYRXk33rSw  
+提取码: b95w  
+(其中包含了所有原始数据和经过步骤1/2后得到的处理过后的数据,将数据放在新建的data文件夹中,即data/squad/)  

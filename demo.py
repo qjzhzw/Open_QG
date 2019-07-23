@@ -20,5 +20,8 @@ if __name__ == '__main__':
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
     params = parser.parse_args()
 
+    # 打印参数列表
+    logger.info('参数列表:{}'.format(params))
+
     input_sentence = '<cls> he is playing on the background . <sep> on the background <sep>'
     logger.info(input_sentence)

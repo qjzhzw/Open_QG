@@ -103,6 +103,9 @@ if __name__ == '__main__':
     if not os.path.exists(params.test_dir):
         os.makedirs(params.test_dir)
 
+    # 打印参数列表
+    logger.info('参数列表:{}'.format(params))
+
     # 加载数据集
     load_dataset(os.path.join(params.main_data_dir, params.dataset_dir, 'origin/train_sent_pre.json'),
                 os.path.join(params.main_data_dir, params.dataset_dir, 'train/sentence.txt'),

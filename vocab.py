@@ -106,7 +106,7 @@ class Vocab():
         # 通过遍历的方式,将单词序列转换为索引形式
         sentence = []
         for index in indices:
-            # 在mode为True时,遇到</s>就停止
+            # 在mode为False时,遇到</s>就停止
             if index == self.convert_word2index('</s>') and mode == False:
                 break
             else:

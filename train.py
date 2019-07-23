@@ -207,16 +207,15 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
             optimizer.step()
 
         # 如果是验证阶段,给出预测的序列
-        if mode == 'train':
+        if mode == 'dev':
             # 将基于vocab的概率分布,通过取最大值的方式得到预测的输出序列
             output_indices_pred = output_indices_pred.permute(0, 2, 1)
             indices_pred = torch.max(output_indices_pred, dim=-1)[1]
 
             # 输出预测序列
             for indices in indices_pred:
-                sentence = vocab.convert_index2sentence(indices, mode=True)
+                sentence = vocab.convert_index2sentence(indices, mode=False)
                 sentences_pred.append(' '.join(sentence))
-            print(sentence)
 
     # 计算总损失
     total_loss = total_loss / total_examples
@@ -246,10 +245,10 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--print_model', type=bool, default=True, help='是否打印出模型结构')
     parser.add_argument('--load_model', type=bool, default=False, help='是否加载训练好的模型参数')
-    parser.add_argument('--print_loss', type=bool, default=True, help='是否打印出训练过程中的损失')
+    parser.add_argument('--print_loss', type=bool, default=False, help='是否打印出训练过程中的损失')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
-    parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
+    parser.add_argument('--learning_rate', type=float, default=0.005, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
     parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
     parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
@@ -270,6 +269,9 @@ if __name__ == '__main__':
     # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
     params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'dev/question.txt')
     params.gold_file = os.path.join(params.main_output_dir, params.dataset_dir, params.gold_file)
+
+    # 打印参数列表
+    logger.info('参数列表:{}'.format(params))
 
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列

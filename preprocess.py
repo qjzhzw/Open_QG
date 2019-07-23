@@ -11,9 +11,10 @@ from vocab import Vocab
 logger = logging.getLogger()
 
 
-def load_dataset(origin_file):
+def load_dataset(origin_file, max_seq_len):
     '''
     origin_file: 输入的原始文件
+    max_seq_len: 句子最大长度(多余的进行截短)
     return sentences: 输入文件的每个句子切分过后每个token组成二维list
     '''
 
@@ -26,6 +27,7 @@ def load_dataset(origin_file):
     sentences = []
     for instance in instances:
         words = instance.strip().split()
+        words = words[:max_seq_len]
         sentence = ['<s>'] + words + ['</s>']
         sentences.append(sentence)
     
@@ -147,6 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('--test_output', type=str, default='test/question.txt', help='验证集输出')
     parser.add_argument('--test_answer_start', type=str, default='test/answer_start.txt', help='验证集答案开始位置')
     parser.add_argument('--test_answer_end', type=str, default='test/answer_end.txt', help='验证集答案结束位置')
+    parser.add_argument('--max_seq_len', type=int, default=50, help='句子最大长度(多余的进行截短)')
     parser.add_argument('--vocab_file', type=str, default='vocab.txt', help='vocab位置')
     parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='输出的pt文件位置')
     params = parser.parse_args()
@@ -163,18 +166,22 @@ if __name__ == '__main__':
     params.test_output = os.path.join(params.main_data_dir, params.dataset_dir, params.test_output)
     params.test_answer_start = os.path.join(params.main_data_dir, params.dataset_dir, params.test_answer_start)
     params.test_answer_end = os.path.join(params.main_data_dir, params.dataset_dir, params.test_answer_end)
+    params.max_seq_len = params.max_seq_len - 2
     params.vocab_file = os.path.join(params.main_data_dir, params.dataset_dir, params.vocab_file)
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
 
+    # 打印参数列表
+    logger.info('参数列表:{}'.format(params))
+
     # 将文件中的输出转化为二维list
-    train_input_sentences = load_dataset(params.train_input)
-    train_output_sentences = load_dataset(params.train_output)
+    train_input_sentences = load_dataset(params.train_input, params.max_seq_len)
+    train_output_sentences = load_dataset(params.train_output, params.max_seq_len)
     train_answers = load_answer(params.train_answer_start, params.train_answer_end)
-    dev_input_sentences = load_dataset(params.dev_input)
-    dev_output_sentences = load_dataset(params.dev_output)
+    dev_input_sentences = load_dataset(params.dev_input, params.max_seq_len)
+    dev_output_sentences = load_dataset(params.dev_output, params.max_seq_len)
     dev_answers = load_answer(params.dev_answer_start, params.dev_answer_end)
-    test_input_sentences = load_dataset(params.test_input)
-    test_output_sentences = load_dataset(params.test_output)
+    test_input_sentences = load_dataset(params.test_input, params.max_seq_len)
+    test_output_sentences = load_dataset(params.test_output, params.max_seq_len)
     test_answers = load_answer(params.test_answer_start, params.test_answer_end)
 
     # 需要保证[输入句子/输出句子/答案]数量一致
