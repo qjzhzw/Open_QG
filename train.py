@@ -289,7 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
     parser.add_argument('--print_model', type=bool, default=False, help='是否打印出模型结构')
     parser.add_argument('--print_loss', type=bool, default=False, help='是否打印出训练过程中的损失')
-    parser.add_argument('--print_results', type=bool, default=True, help='是否打印出训练过程中的预测序列')
+    parser.add_argument('--print_results', type=bool, default=False, help='是否打印出训练过程中的预测序列')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
