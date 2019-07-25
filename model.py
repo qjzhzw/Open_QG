@@ -1,6 +1,5 @@
 ### 模型
 
-import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -153,8 +152,6 @@ class Decoder(nn.Module):
         # 经过输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         output_indices = self.output(output_indices)
         # output_indices: [batch_size, output_seq_len, vocab_size]
-        output_indices = output_indices.permute(0, 2, 1)
-        # output_indices: [batch_size, vocab_size, output_seq_len]
 
         # # 测试所使用GRU
         # output_indices = self.word_embedding_decoder(output_indices)
@@ -165,8 +162,6 @@ class Decoder(nn.Module):
         # # output_indices: [batch_size, output_seq_len, d_model]
         # output_indices = self.output(output_indices)
         # # output_indices: [batch_size, output_seq_len, vocab_size]
-        # output_indices = output_indices.permute(0, 2, 1)
-        # # output_indices: [batch_size, vocab_size, output_seq_len]
 
         return output_indices
 
@@ -268,10 +263,6 @@ class Multihead_attention(nn.Module):
         self.linear_key = nn.Linear(self.params.d_model, self.params.d_k * self.params.num_heads)
         self.linear_value = nn.Linear(self.params.d_model, self.params.d_v * self.params.num_heads)
 
-        nn.init.normal_(self.linear_query.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_k)))
-        nn.init.normal_(self.linear_key.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_k)))
-        nn.init.normal_(self.linear_value.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_v)))
-
         self.softmax_attention = nn.Softmax(dim=-1)
 
         self.linear_o = nn.Linear(self.params.num_heads * self.params.d_v, self.params.d_model)
@@ -317,7 +308,7 @@ class Multihead_attention(nn.Module):
         # attention的计算,通过attention分数得到context_vector向量
         attention_score = torch.matmul(query, key)
         # attention_score: [batch_size, num_heads, seq_len_query, seq_len_key]
-        scaled_attention_score = attention_score / math.sqrt(self.params.d_k)
+        scaled_attention_score = attention_score / np.sqrt(self.params.d_k)
         # 在计算attention分数时需要考虑mask,对于mask为0的部分用负无穷进行替代
         # attention_score: [batch_size, num_heads, seq_len_query, seq_len_key]
         # mask: [batch_size, seq_len_query, seq_len_key]

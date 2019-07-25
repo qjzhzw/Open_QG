@@ -8,12 +8,13 @@ import shutil
 import torch
 import torch.nn as nn
 import torch.utils.data
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from vocab import Vocab
 from dataset import Dataset, collate_fn
 from model import Model
-from optim import ScheduledOptim
+from optimizer import Optimizer
 
 logger = logging.getLogger()
 
@@ -69,7 +70,6 @@ def train_model(train_loader, dev_loader, vocab, params):
     if params.cuda and torch.cuda.is_available():
         model.cuda()
         flag_cuda = True
-    logger.info('当前模型cuda设置为{}'.format(flag_cuda))
 
     # 如果参数中设置了打印模型结构,则打印模型结构
     if params.print_model:
@@ -82,13 +82,7 @@ def train_model(train_loader, dev_loader, vocab, params):
         logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
 
     # 定义优化器
-    # optimizer = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
-    optimizer = ScheduledOptim(
-        torch.optim.Adam(
-            filter(lambda x: x.requires_grad, model.parameters()),
-            lr=params.learning_rate,
-            betas=(0.9, 0.98), eps=1e-09),
-        params.d_model, 4000)
+    optimizer = Optimizer(model, params)
 
     # 存储每一轮验证集的损失,根据验证集损失最小来挑选最好的模型进行保存
     total_loss_epochs = []
@@ -186,17 +180,65 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         # input_indices: [batch_size, input_seq_len]
         # output_indices: [batch_size, output_seq_len]
         output_indices_pred = model(input_indices, output_indices)
+        # output_indices_pred: [batch_size, output_seq_len, vocab_size]
 
-        # 定义损失函数
-        # NLLLoss(x,y)的两个参数:
-        # x: [batch_size, num_classes, ……], 类型为LongTensor, 是预测输出
-        # y: [batch_size, ……], 类型为LongTensor, 是真实输出
-        criterion = torch.nn.CrossEntropyLoss(ignore_index=vocab.word2index['<pad>'])
+        # 将基于vocab的概率分布,通过取最大值的方式得到预测的输出序列
+        indices_pred = torch.max(output_indices_pred, dim=-1)[1]
+        # indices_pred: [batch_size, output_seq_len]
+
+        # 输出预测序列
+        for indices in indices_pred:
+            # mode: True表示输出完整序列
+            #       False表示遇到</s>就停止(只输出到</s>前的序列)
+            sentence = vocab.convert_index2sentence(indices, mode=False)
+            sentences_pred.append(' '.join(sentence))
 
         # 利用预测输出和真实输出计算损失
-        # output_indices_pred: [batch_size, vocab_size, output_seq_len]
+        # output_indices_pred: [batch_size, output_seq_len, vocab_size]
         # output_indices_gold: [batch_size, output_seq_len]
-        loss = criterion(output_indices_pred, output_indices_gold)
+        if params.label_smoothing:
+            # 使用标签平滑归一化,自己编写损失函数
+            batch_size = output_indices_pred.size(0)
+            output_seq_len = output_indices_pred.size(1)
+            vocab_size = output_indices_pred.size(2)
+
+            # 调整维度
+            output_indices_pred = output_indices_pred.view(batch_size * output_seq_len, vocab_size)
+            output_indices_gold = output_indices_gold.contiguous().view(batch_size * output_seq_len)
+            # output_indices_pred: [batch_size * output_seq_len, vocab_size]
+            # output_indices_gold: [batch_size * output_seq_len]
+
+            # 对预测值求softmax,调整维度
+            output_indices_pred = F.log_softmax(output_indices_pred, dim=-1)
+            output_indices_gold = output_indices_gold.unsqueeze(1)
+            # output_indices_gold: [batch_size * output_seq_len, vocab_size]
+            # output_indices_gold: [batch_size * output_seq_len, 1]
+
+            # 计算损失
+            nll_loss = -output_indices_pred.gather(dim=-1, index=output_indices_gold)
+            smooth_loss = -output_indices_pred.sum(dim=-1, keepdim=True)
+            # nll_loss: [batch_size * output_seq_len]
+            # smooth_loss: [batch_size * output_seq_len]
+
+            # 通过取平均的方式得到损失
+            nll_loss = nll_loss.mean()
+            smooth_loss = smooth_loss.mean()
+
+            # 使用标签平滑归一化,得到最终损失
+            eps_i = params.label_smoothing_eps / vocab_size
+            loss = (1 - params.label_smoothing_eps) * nll_loss + eps_i * smooth_loss
+        else:
+            # 使用内置的损失函数
+            # NLLLoss(x,y)的两个参数:
+            # x: [batch_size, num_classes, ……], 类型为LongTensor, 是预测输出
+            # y: [batch_size, ……], 类型为LongTensor, 是真实输出
+            criterion = torch.nn.CrossEntropyLoss(ignore_index=vocab.word2index['<pad>'])
+
+            # output_indices_pred: [batch_size, output_seq_len, vocab_size]
+            output_indices_pred = output_indices_pred.permute(0, 2, 1)
+            # output_indices_pred: [batch_size, vocab_size, output_seq_len]
+            # output_indices_gold: [batch_size, output_seq_len]
+            loss = criterion(output_indices_pred, output_indices_gold)
 
         # 计算到当前为止的总样例数和总损失
         num_examples = input_indices.size(0)
@@ -213,19 +255,9 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
             loss.backward()
             optimizer.step()
 
-        # 如果是验证阶段,给出预测的序列
-        if mode == 'train':
-            # 将基于vocab的概率分布,通过取最大值的方式得到预测的输出序列
-            output_indices_pred = output_indices_pred.permute(0, 2, 1)
-            indices_pred = torch.max(output_indices_pred, dim=-1)[1]
-
-            # 输出预测序列
-            for indices in indices_pred:
-                # mode: True表示输出完整序列
-                #       False表示遇到</s>就停止(只输出到</s>前的序列)
-                sentence = vocab.convert_index2sentence(indices, mode=True)
-                sentences_pred.append(' '.join(sentence))
-            print(sentence)
+            # 为了便于测试,在训练阶段也可以把预测序列打印出来
+            if params.print_results:
+                logger.info(sentence)
 
     # 计算总损失
     total_loss = total_loss / total_examples
@@ -253,12 +285,16 @@ if __name__ == '__main__':
     parser.add_argument('--pred_file', type=str, default='pred.txt', help='输出的预测文件位置')
     parser.add_argument('--gold_file', type=str, default='gold.txt', help='用于比较的真实文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
-    parser.add_argument('--print_model', type=bool, default=False, help='是否打印出模型结构')
     parser.add_argument('--load_model', type=bool, default=False, help='是否加载训练好的模型参数')
+    parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
+    parser.add_argument('--print_model', type=bool, default=False, help='是否打印出模型结构')
     parser.add_argument('--print_loss', type=bool, default=False, help='是否打印出训练过程中的损失')
+    parser.add_argument('--print_results', type=bool, default=True, help='是否打印出训练过程中的预测序列')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
+    parser.add_argument('--warmup_steps', type=int, default=4000, help='模型超参数:warmup_steps')
+    parser.add_argument('--label_smoothing_eps', type=float, default=0.1, help='模型超参数:标签平滑归一化')
     parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
     parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
     parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
