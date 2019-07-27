@@ -67,7 +67,7 @@ def train_model(train_loader, dev_loader, vocab, params):
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
     flag_cuda = False
-    if params.cuda and torch.cuda.is_available():
+    if params.cuda:
         model.cuda()
         flag_cuda = True
 
@@ -88,7 +88,7 @@ def train_model(train_loader, dev_loader, vocab, params):
     total_loss_epochs = []
 
     # 每一轮的训练和验证
-    for epoch in range(params.num_epochs):
+    for epoch in range(1, params.num_epochs + 1):
         # 一轮模型训练
         model, _, _ = one_epoch(model, optimizer, epoch, train_loader, vocab, params, mode='train')
         # 一轮模型验证
@@ -255,9 +255,9 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
             loss.backward()
             optimizer.step()
 
-            # 为了便于测试,在训练阶段也可以把预测序列打印出来
-            if params.print_results:
-                logger.info(sentence)
+        # 为了便于测试,在训练阶段也可以把预测序列打印出来
+        if params.print_results:
+            logger.info(sentence)
 
     # 计算总损失
     total_loss = total_loss / total_examples
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(学习率)')
     parser.add_argument('--warmup_steps', type=int, default=4000, help='模型超参数:warmup_steps')
     parser.add_argument('--label_smoothing_eps', type=float, default=0.1, help='模型超参数:标签平滑归一化')
-    parser.add_argument('--num_epochs', type=int, default=10, help='模型超参数:num_epochs(训练轮数)')
+    parser.add_argument('--num_epochs', type=int, default=1, help='模型超参数:num_epochs(训练轮数)')
     parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
     parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
     parser.add_argument('--num_heads', type=int, default=8, help='transformer模型超参数:num_heads')
@@ -311,6 +311,10 @@ if __name__ == '__main__':
     params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
     params.output_dir = os.path.join(params.main_output_dir, params.dataset_dir)
     params.pred_file = os.path.join(params.main_output_dir, params.dataset_dir, params.pred_file)
+    if params.cuda and torch.cuda.is_available():
+        params.cuda = True
+    else:
+        params.cuda = False
 
     # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
     params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'dev/question.txt')

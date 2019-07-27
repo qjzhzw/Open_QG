@@ -23,7 +23,7 @@ def test_demo(vocab, params, input_sentence):
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
     flag_cuda = False
-    if params.cuda and torch.cuda.is_available():
+    if params.cuda:
         model.cuda()
         flag_cuda = True
 
@@ -69,6 +69,10 @@ if __name__ == '__main__':
 
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
     params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
+    if params.cuda and torch.cuda.is_available():
+        params.cuda = True
+    else:
+        params.cuda = False
 
     # 打印参数列表
     logger.info('参数列表:{}'.format(params))

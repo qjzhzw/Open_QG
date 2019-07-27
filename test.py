@@ -13,6 +13,7 @@ from tqdm import tqdm
 from vocab import Vocab
 from dataset import Dataset, collate_fn
 from model import Model
+from Translator import Translator
 
 logger = logging.getLogger()
 
@@ -31,7 +32,7 @@ def prepare_dataloaders(data, params):
         num_workers = params.num_workers,
         batch_size = params.batch_size,
         collate_fn = collate_fn,
-        shuffle = True
+        shuffle = False
     )
     logger.info('正在构造test_loader,共有{}个batch'.format(len(test_loader)))
 
@@ -52,7 +53,7 @@ def test_model(test_loader, vocab, params):
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
     flag_cuda = False
-    if params.cuda and torch.cuda.is_available():
+    if params.cuda:
         model.cuda()
         flag_cuda = True
 
@@ -109,11 +110,59 @@ def one_epoch(model, loader, vocab, params):
         output_indices = batch[1]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if params.cuda and torch.cuda.is_available():
+        if params.cuda:
             input_indices = input_indices.cuda()
             output_indices = output_indices.cuda()
 
-        print(input_indices[0])
+        translator = Translator(params, model)
+        all_hyp, all_scores = translator.translate_batch(input_indices)
+        for i in all_hyp:
+            sentence = vocab.convert_index2sentence(i[0])
+            sentences_pred.append(' '.join(sentence))
+
+        # # # 起始符号均为<s>
+        # batch_size = input_indices.size(0)
+        # output_indices = torch.zeros(batch_size, 1).long().cuda()
+        # for i, output_indice in enumerate(output_indices):
+        #     output_indices[i] = vocab.convert_word2index('<s>')
+        # # output_indices: [batch_size, output_seq_len(1)]
+
+        # # ['<s>', 'what']
+        # # output_indices = torch.tensor([[2]])
+
+        # # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
+        # if params.cuda:
+        #     input_indices = input_indices.cuda()
+        #     output_indices = output_indices.cuda()
+
+        # encoder_hiddens = model.encoder(input_indices)
+        # # encoder_hiddens: [batch_size, input_seq_len, d_model]
+
+        # # output_seq_len的取值:1,2,3,4,5,……
+        # for i in range(20):
+        #     output_indices_pred = model.decoder(output_indices, input_indices, encoder_hiddens)
+        #     # output_indices_pred: [batch_size, output_seq_len, vocab_size]
+
+        #     # 取预测最大值作为输出
+        #     indices_pred = torch.max(output_indices_pred, dim=-1)[1]
+        #     # print(vocab.convert_index2sentence(indices_pred[0], mode=False))
+        #     # indices_pred: [batch_size, output_seq_len]
+
+        #     # 取模型输出的最后一个字符
+        #     indices_pred = indices_pred[:, -1].unsqueeze(1)
+        #     # indices_pred: [batch_size, output_seq_len(1)]
+
+        #     output_indices = torch.cat((output_indices, indices_pred), dim=-1)
+        #     # output_indices: [batch_size, output_seq_len + 1]
+        
+        # # 输出预测序列
+        # for indices in output_indices:
+        #     # mode: True表示输出完整序列
+        #     #       False表示遇到</s>就停止(只输出到</s>前的序列)
+        #     sentence = vocab.convert_index2sentence(indices, mode=False)
+        #     sentence = sentence[1:]
+        #     sentences_pred.append(' '.join(sentence))
+        # print(sentence)
 
     return sentences_pred
 
@@ -157,6 +206,10 @@ if __name__ == '__main__':
     params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
     params.output_dir = os.path.join(params.main_output_dir, params.dataset_dir)
     params.pred_file = os.path.join(params.main_output_dir, params.dataset_dir, params.pred_file)
+    if params.cuda and torch.cuda.is_available():
+        params.cuda = True
+    else:
+        params.cuda = False
 
     # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
     params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'test/question.txt')

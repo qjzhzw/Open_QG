@@ -129,12 +129,12 @@ class Decoder(nn.Module):
 
         # 构造掩膜和位置信息
         output_indices_positions = self.mask_and_position.build_positions(output_indices)
-        decoder_self_attention_masks = (self.mask_and_position.build_pad_masks(query=output_indices, key=output_indices) + \
-                                       self.mask_and_position.build_triu_masks(output_indices)).gt(0)
         decoder_mutual_attention_masks = self.mask_and_position.build_pad_masks(query=output_indices, key=input_indices)
-        # output_indices_positions: [batch_size, output_seq_len]
+        decoder_self_attention_masks = (self.mask_and_position.build_pad_masks(query=output_indices, key=output_indices) * \
+                                        self.mask_and_position.build_triu_masks(output_indices)).gt(0)
         # decoder_self_attention_masks: [batch_size, output_seq_len, output_seq_len]
-        # decoder__mutual_attention_masks: [batch_size, output_seq_len, input_seq_len]
+        # decoder_mutual_attention_masks: [batch_size, output_seq_len, input_seq_len]
+        # decoder_self_attention_masks: [batch_size, output_seq_len, output_seq_len]
 
         # 将索引/位置信息转换为词向量
         output_indices = self.word_embedding_decoder(output_indices) + \
@@ -156,9 +156,9 @@ class Decoder(nn.Module):
         # # 测试所使用GRU
         # output_indices = self.word_embedding_decoder(output_indices)
         # # output_indices: [batch_size, output_seq_len, d_model]
-        # input_indices = input_indices[:, 0, :].unsqueeze(0).contiguous()
-        # # input_indices: [1, batch_size, d_model]
-        # output_indices, _ = self.GRU_decoder(output_indices, input_indices)
+        # encoder_hiddens = encoder_hiddens[:, 0, :].unsqueeze(0).contiguous()
+        # # encoder_hiddens: [1, batch_size, d_model]
+        # output_indices, _ = self.GRU_decoder(output_indices, encoder_hiddens)
         # # output_indices: [batch_size, output_seq_len, d_model]
         # output_indices = self.output(output_indices)
         # # output_indices: [batch_size, output_seq_len, vocab_size]
@@ -415,11 +415,8 @@ class Mask_and_position():
         return indices_masks: [batch_size, seq_len_query, seq_len_key]
         '''
 
-        batch_size = key.size(0)
-        seq_len_key = key.size(1)
-
         # 构造一个全为1的tensor
-        indices_ones_masks = torch.ones(batch_size, seq_len_key)
+        indices_ones_masks = torch.ones_like(key).float()
         # indices_ones_masks: [batch_size, seq_len_key]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
@@ -454,7 +451,7 @@ class Mask_and_position():
         # [seq_len, seq_len]
 
         # 构造成上三角矩阵,即右上均为1
-        indices_triu_masks = torch.triu(indices_ones_masks)
+        indices_triu_masks = torch.triu(indices_ones_masks, diagonal=1)
         # [seq_len, seq_len]
 
         # 构造成下三角矩阵,即左下均为1
