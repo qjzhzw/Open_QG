@@ -7,6 +7,7 @@ import torch
 
 from vocab import Vocab
 from model import Model
+from Translator import Translator
 
 logger = logging.getLogger()
 
@@ -15,8 +16,17 @@ def test_demo(vocab, params, input_sentence):
     '''
     vocab: 从pt文件中读取的该任务所使用的vocab
     params: 参数集合
-    input_sentence: 输入句子
+    input_sentence: 输入句子(文本形式)
+    return output_sentence: 输出句子(文本形式)
     '''
+
+    # 将文本转化为list,并添加起止符<s>和</s>
+    input_sentence = input_sentence.split()
+    input_sentence = ['<s>'] + input_sentence + ['</s>']
+
+    # 将输入句子转化为索引形式
+    input_indices = vocab.convert_sentence2index(input_sentence)
+    logger.info('输入句子的索引形式为 : {}'.format(input_indices))
 
     # 定义模型
     model = Model(params, vocab)
@@ -36,7 +46,27 @@ def test_demo(vocab, params, input_sentence):
     # 加载模型参数
     model_params = torch.load(params.checkpoint_file)
     model.load_state_dict(model_params)
-    logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    # logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+
+    model.eval()
+
+    # 输入模型
+    input_indices = torch.tensor(input_indices)
+    input_indices = input_indices.unsqueeze(0)
+    if params.cuda:
+        input_indices = input_indices.cuda()
+
+    translator = Translator(params, model)
+    all_hyp, all_scores = translator.translate_batch(input_indices)
+    output_indices = all_hyp[0][0]
+
+    logger.info('输出句子的索引形式为 : {}'.format(output_indices))
+
+    # 将输出句子转化为文本形式
+    output_sentence = vocab.convert_index2sentence(output_indices)
+    output_sentence = ' '.join(output_sentence)
+
+    return output_sentence
 
 
 if __name__ == '__main__':
@@ -82,12 +112,10 @@ if __name__ == '__main__':
     vocab = data['vocab']
 
     # 测试demo的输入句子
-    input_sentence = '<cls> he is playing on the background . <sep> on the background <sep>'
+    input_sentence = '<cls> 5000000 people are in the united states . <sep> 5000000 <sep>'
     logger.info('输入句子的文本形式为 : {}'.format(input_sentence))
 
-    # 将输入句子转化为索引形式
-    input_sentence = vocab.convert_sentence2index(input_sentence)
-    logger.info('输入句子的索引形式为 : {}'.format(input_sentence))
-
     # 测试demo
-    test_demo(vocab, params, input_sentence)
+    output_sentence = test_demo(vocab, params, input_sentence)
+
+    logger.info('输出句子的文本形式为 : {}'.format(output_sentence))
