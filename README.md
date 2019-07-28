@@ -55,12 +55,12 @@ requirements.txt : 需要安装的依赖包及对应版本
 
 
 ## 实验结果:
-BLEU-1: 27.28
-BLEU-2: 11.35
-BLEU-3: 6.01
-BLEU-4: 3.53
-METEOR: 8.36
-ROUGH-L: 26.84
+BLEU-1: 27.28  
+BLEU-2: 11.35  
+BLEU-3: 6.01  
+BLEU-4: 3.53  
+METEOR: 8.36  
+ROUGH-L: 26.84  
 
 
 ## 测试demo:
