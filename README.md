@@ -65,4 +65,4 @@ ROUGH-L: 26.84
 
 
 ## 测试demo:
-![Image text](image/demo.jpg)
+![Image text](https://raw.githubusercontent.com/qjzhzw/Open_QG/master/image/demo.jpg)
