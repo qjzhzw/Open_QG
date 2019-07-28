@@ -285,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--pred_file', type=str, default='pred.txt', help='输出的预测文件位置')
     parser.add_argument('--gold_file', type=str, default='gold.txt', help='用于比较的真实文件位置')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
-    parser.add_argument('--load_model', type=bool, default=False, help='是否加载训练好的模型参数')
+    parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
     parser.add_argument('--print_model', type=bool, default=False, help='是否打印出模型结构')
     parser.add_argument('--print_loss', type=bool, default=False, help='是否打印出训练过程中的损失')

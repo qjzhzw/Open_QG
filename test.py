@@ -119,6 +119,7 @@ def one_epoch(model, loader, vocab, params):
         for i in all_hyp:
             sentence = vocab.convert_index2sentence(i[0])
             sentences_pred.append(' '.join(sentence))
+        print(sentences_pred[-1])
 
         # # # 起始符号均为<s>
         # batch_size = input_indices.size(0)
