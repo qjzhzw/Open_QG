@@ -69,4 +69,4 @@ ROUGH-L: 26.84
 
 
 ## 测试demo:
-<img src="https://raw.githubusercontent.com/qjzhzw/Open_QG/master/image/demo.png" width=100)  
+![demo.png](https://raw.githubusercontent.com/qjzhzw/Open_QG/master/image/demo.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/300)  
