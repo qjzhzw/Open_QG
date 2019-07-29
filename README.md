@@ -4,7 +4,8 @@
 ## 系统基本介绍
 使用Python版本 : Python3.6(其中模型评估部分脚本基本Python2.7)  
 使用深度学习框架 : Pytorch0.4.1  
-使用seq2seq模型结构 : Transformer(详情参考论文《Attention Is All You Need》)  
+使用模型结构 : Transformer(详情参考论文《Attention Is All You Need》)  
+使用数据集 : SQuAD(可扩展到其它QG数据集)  
 
 
 ## 代码运行方式：
@@ -30,17 +31,19 @@
 #### 百度网盘:
 链接: https://pan.baidu.com/s/1JKaHR5mde8GGxYRXk33rSw  
 提取码: b95w  
-(其中包含了所有原始数据和经过步骤1/2后得到的处理过后的数据,将数据放在新建的data文件夹中,即data/squad/)  
+其中包含了所有原始数据和经过步骤1/2后得到的处理过后的数据,将数据放在新建的data文件夹中,即data/squad/  
+(其中原始数据由Song et al., 2018提供)  
 
 
 ## 文件结构介绍：
 #### 文件夹:
-/data : 存储原始数据(数据较大无法上传)  
+/data : 存储原始数据  
 /checkpoint : 存储训练好的模型参数(需要时会自动创建)  
 /output : 存储预测文件(需要时会自动创建)  
-/evaluate : 评价结果的脚本,包含BLEU/METEOR/ROUGH-L(由Du et al. 2017提供)  
+/evaluate : 评价结果的脚本,包含BLEU/METEOR/ROUGH-L(由Du et al., 2017提供)  
+/image : 存储README.md中所用到的图片  
 #### python文件:
-load_dataset.py : 读取原始数据构造成文本形式  
+load_dataset.py : 读取原始数据构造成文本形式(只针对SQuAD数据集)  
 preprocess.py : 数据预处理  
 train.py : 模型训练+验证  
 test.py : 模型测试  
@@ -48,10 +51,12 @@ demo.py : demo测试
 vocab.py : Vocab类(构造任务所使用词表)  
 dataset.py : Dataset类(将数据构造成batch形式)  
 model.py : Model类(Transformer模型)  
+optimizer.py : Optimizer类(训练模型所使用优化器)  
+beam.py : Beam类(模型测试时所使用beam search)  
 #### shell脚本:
 pipeline.sh 运行脚本  
 #### 其它文件:
-requirements.txt : 需要安装的依赖包及对应版本
+requirements.txt : 需要安装的依赖包及对应版本  
 
 
 ## 实验结果:
@@ -64,4 +69,4 @@ ROUGH-L: 26.84
 
 
 ## 测试demo:
-![Image text](https://raw.githubusercontent.com/qjzhzw/Open_QG/master/image/demo.jpg)
+![Image text](https://raw.githubusercontent.com/qjzhzw/Open_QG/master/image/demo.png)  

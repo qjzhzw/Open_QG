@@ -7,7 +7,7 @@ import torch
 
 from vocab import Vocab
 from model import Model
-from Translator import Translator
+from beam import Translator
 
 logger = logging.getLogger()
 
@@ -112,7 +112,10 @@ if __name__ == '__main__':
     vocab = data['vocab']
 
     # 测试demo的输入句子
-    input_sentence = '<cls> 5000000 people are in the united states . <sep> 5000000 <sep>'
+    sentence = 'There are 5000000 people in the united states .'
+    answer = '5000000'
+
+    input_sentence = '<cls> ' + sentence + ' <sep> ' + answer + ' <sep>'
     logger.info('输入句子的文本形式为 : {}'.format(input_sentence))
 
     # 测试demo

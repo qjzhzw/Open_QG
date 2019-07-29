@@ -13,7 +13,7 @@ from tqdm import tqdm
 from vocab import Vocab
 from dataset import Dataset, collate_fn
 from model import Model
-from Translator import Translator
+from beam import Translator
 
 logger = logging.getLogger()
 
