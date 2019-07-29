@@ -66,10 +66,7 @@ def train_model(train_loader, dev_loader, vocab, params):
     model = Model(params, vocab)
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
-    flag_cuda = False
-    if params.cuda:
-        model.cuda()
-        flag_cuda = True
+    model = model.to(params.device)
 
     # 如果参数中设置了打印模型结构,则打印模型结构
     if params.print_model:
@@ -77,7 +74,7 @@ def train_model(train_loader, dev_loader, vocab, params):
 
     # 如果参数中设置了加载训练好的模型参数且模型参数文件存在,则加载模型参数
     if params.load_model and os.path.exists(params.checkpoint_file):
-        model_params = torch.load(params.checkpoint_file)
+        model_params = torch.load(params.checkpoint_file, map_location=params.device)
         model.load_state_dict(model_params)
         logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
 
@@ -159,9 +156,8 @@ def one_epoch(model, optimizer, epoch, loader, vocab, params, mode='train'):
         output_indices = batch[1]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if params.cuda and torch.cuda.is_available():
-            input_indices = input_indices.cuda()
-            output_indices = output_indices.cuda()
+        input_indices = input_indices.to(params.device)
+        output_indices = output_indices.to(params.device)
 
         # 模型:通过模型输入来预测真实输出,即
         #  <s>  1   2   3
@@ -313,8 +309,10 @@ if __name__ == '__main__':
     params.pred_file = os.path.join(params.main_output_dir, params.dataset_dir, params.pred_file)
     if params.cuda and torch.cuda.is_available():
         params.cuda = True
+        params.device = torch.device('cuda')
     else:
         params.cuda = False
+        params.device = torch.device('cpu')
 
     # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
     params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'dev/question.txt')
@@ -333,3 +331,8 @@ if __name__ == '__main__':
 
     # 训练模型
     train_model(train_loader, dev_loader, vocab, params)
+
+
+    # 空两行以示尊重
+    print()
+    print()

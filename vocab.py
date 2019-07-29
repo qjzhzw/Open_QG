@@ -3,6 +3,7 @@
 
 import torch
 
+
 class Vocab():
     def __init__(self):
         self.vocab = []

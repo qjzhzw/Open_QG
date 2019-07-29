@@ -1,19 +1,17 @@
-''' This module will handle the text generation with beam search. '''
+### 基于beam search的序列生成
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model import Model as Transformer
 
-class Translator(object):
+class Generator(object):
     ''' Load with trained model and handle the beam search '''
 
     def __init__(self, params, model):
         self.params = params
         self.model = model
-        self.device = torch.device('cuda')
 
         model.word_prob_prj = nn.LogSoftmax(dim=1)        
 
@@ -43,7 +41,7 @@ class Translator(object):
             # so the decoder will not run on completed sentences.
             n_prev_active_inst = len(inst_idx_to_position_map)
             active_inst_idx = [inst_idx_to_position_map[k] for k in active_inst_idx_list]
-            active_inst_idx = torch.LongTensor(active_inst_idx).to(self.device)
+            active_inst_idx = torch.LongTensor(active_inst_idx).to(self.params.device)
 
             active_src_seq = collect_active_part(src_seq, active_inst_idx, n_prev_active_inst, n_bm)
             active_src_enc = collect_active_part(src_enc, active_inst_idx, n_prev_active_inst, n_bm)
@@ -57,12 +55,12 @@ class Translator(object):
 
             def prepare_beam_dec_seq(inst_dec_beams, len_dec_seq):
                 dec_partial_seq = [b.get_current_state() for b in inst_dec_beams if not b.done]
-                dec_partial_seq = torch.stack(dec_partial_seq).to(self.device)
+                dec_partial_seq = torch.stack(dec_partial_seq).to(self.params.device)
                 dec_partial_seq = dec_partial_seq.view(-1, len_dec_seq)
                 return dec_partial_seq
 
             def prepare_beam_dec_pos(len_dec_seq, n_active_inst, n_bm):
-                dec_partial_pos = torch.arange(1, len_dec_seq + 1, dtype=torch.long, device=self.device)
+                dec_partial_pos = torch.arange(1, len_dec_seq + 1, dtype=torch.long, device=self.params.device)
                 dec_partial_pos = dec_partial_pos.unsqueeze(0).repeat(n_active_inst * n_bm, 1)
                 return dec_partial_pos
 
@@ -116,7 +114,7 @@ class Translator(object):
             src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
 
             #-- Prepare beams
-            inst_dec_beams = [Beam(n_bm, device=self.device) for _ in range(n_inst)]
+            inst_dec_beams = [Beam(n_bm, device=self.params.device) for _ in range(n_inst)]
 
             #-- Bookkeeping for active or not
             active_inst_idx_list = list(range(n_inst))

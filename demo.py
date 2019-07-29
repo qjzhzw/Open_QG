@@ -7,7 +7,7 @@ import torch
 
 from vocab import Vocab
 from model import Model
-from beam import Translator
+from beam import Generator
 
 logger = logging.getLogger()
 
@@ -32,10 +32,7 @@ def test_demo(vocab, params, input_sentence):
     model = Model(params, vocab)
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
-    flag_cuda = False
-    if params.cuda:
-        model.cuda()
-        flag_cuda = True
+    model = model.to(params.device)
 
     # 如果参数中设置了打印模型结构,则打印模型结构
     if params.print_model:
@@ -44,7 +41,7 @@ def test_demo(vocab, params, input_sentence):
     # 断言: 模型参数文件存在
     assert os.path.exists(params.checkpoint_file)
     # 加载模型参数
-    model_params = torch.load(params.checkpoint_file)
+    model_params = torch.load(params.checkpoint_file, map_location=params.device)
     model.load_state_dict(model_params)
     # logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
 
@@ -53,10 +50,9 @@ def test_demo(vocab, params, input_sentence):
     # 输入模型
     input_indices = torch.tensor(input_indices)
     input_indices = input_indices.unsqueeze(0)
-    if params.cuda:
-        input_indices = input_indices.cuda()
+    input_indices = input_indices.to(params.device)
 
-    translator = Translator(params, model)
+    translator = Generator(params, model)
     all_hyp, all_scores = translator.translate_batch(input_indices)
     output_indices = all_hyp[0][0]
 
@@ -69,7 +65,12 @@ def test_demo(vocab, params, input_sentence):
     return output_sentence
 
 
-if __name__ == '__main__':
+def demo(input_sentence, input_answer):
+    '''
+    input_sentence: 输入句子(文本形式)
+    input_answer: 输入答案(文本形式)
+    return output_question: 输出问题(文本形式)
+    '''
 
     # logger的一些设置
     logger.setLevel(logging.INFO)
@@ -101,8 +102,10 @@ if __name__ == '__main__':
     params.checkpoint_file = os.path.join(params.main_checkpoint_dir, params.dataset_dir, params.checkpoint_file)
     if params.cuda and torch.cuda.is_available():
         params.cuda = True
+        params.device = torch.device('cuda')
     else:
         params.cuda = False
+        params.device = torch.device('cpu')
 
     # 打印参数列表
     logger.info('参数列表:{}'.format(params))
@@ -111,14 +114,24 @@ if __name__ == '__main__':
     data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
 
-    # 测试demo的输入句子
-    sentence = 'There are 5000000 people in the united states .'
-    answer = '5000000'
-
-    input_sentence = '<cls> ' + sentence + ' <sep> ' + answer + ' <sep>'
+    input_sentence = '<cls> ' + input_sentence + ' <sep> ' + input_answer + ' <sep>'
     logger.info('输入句子的文本形式为 : {}'.format(input_sentence))
 
     # 测试demo
-    output_sentence = test_demo(vocab, params, input_sentence)
+    output_question = test_demo(vocab, params, input_sentence)
 
-    logger.info('输出句子的文本形式为 : {}'.format(output_sentence))
+    return output_question
+
+
+if __name__ == '__main__':
+
+    # 测试demo: 输入句子和答案,输出问题
+    output_question = demo(input_sentence = 'There are 5000000 people in the united states .',
+                    input_answer = '5000000')
+
+    logger.info('输出问题的文本形式为 : {}'.format(output_question))
+
+
+    # 空两行以示尊重
+    print()
+    print()

@@ -403,8 +403,7 @@ class Mask_and_position():
         # indices_positions: [batch_size, seq_len]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if self.params.cuda:
-            indices_positions = indices_positions.cuda()
+        indices_positions = indices_positions.to(self.params.device)
 
         return indices_positions
 
@@ -420,8 +419,7 @@ class Mask_and_position():
         # indices_ones_masks: [batch_size, seq_len_key]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if self.params.cuda:
-            indices_ones_masks = indices_ones_masks.cuda()
+        indices_ones_masks = indices_ones_masks.to(self.params.device)
 
         # 是序列的部分赋值为0,不是序列的部分赋值为1
         indices_masks = key.eq(0).float()
@@ -463,7 +461,6 @@ class Mask_and_position():
         # [batch_size, seq_len, seq_len]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if self.params.cuda:
-            indices_triu_masks = indices_triu_masks.cuda()
+        indices_triu_masks = indices_triu_masks.to(self.params.device)
 
         return indices_triu_masks

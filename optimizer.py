@@ -1,7 +1,8 @@
 ### 优化器
 
-import torch
 import numpy as np
+import torch
+
 
 class Optimizer():
     def __init__(self, model, params):

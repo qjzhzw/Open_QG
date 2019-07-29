@@ -100,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("--tgt", "--tgt_file", dest="tgt_file", default=os.path.join("output", args.dataset_dir, "gold.txt"), help="target file")
     args = parser.parse_args()
 
-    print("\nscores: ")
+    print("scores: ")
     results = eval(args.out_file, args.src_file, args.tgt_file)
 
 

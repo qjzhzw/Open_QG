@@ -1,8 +1,8 @@
 ### Dataset类
 
+import numpy as np
 import torch
 import torch.utils.data
-import numpy as np
 
 
 class Dataset(torch.utils.data.Dataset):

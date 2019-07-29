@@ -212,3 +212,8 @@ if __name__ == '__main__':
         'test_output_indices' : test_output_indices,
     }
     torch.save(data, params.temp_pt_file)
+
+
+    # 空两行以示尊重
+    print()
+    print()

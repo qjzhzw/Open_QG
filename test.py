@@ -13,7 +13,7 @@ from tqdm import tqdm
 from vocab import Vocab
 from dataset import Dataset, collate_fn
 from model import Model
-from beam import Translator
+from beam import Generator
 
 logger = logging.getLogger()
 
@@ -52,10 +52,7 @@ def test_model(test_loader, vocab, params):
     model = Model(params, vocab)
 
     # 如果参数中设置了使用cuda且当前cuda可用,则将模型放到cuda上
-    flag_cuda = False
-    if params.cuda:
-        model.cuda()
-        flag_cuda = True
+    model = model.to(params.device)
 
     # 如果参数中设置了打印模型结构,则打印模型结构
     if params.print_model:
@@ -64,7 +61,7 @@ def test_model(test_loader, vocab, params):
     # 断言: 模型参数文件存在
     assert os.path.exists(params.checkpoint_file)
     # 加载模型参数
-    model_params = torch.load(params.checkpoint_file)
+    model_params = torch.load(params.checkpoint_file, map_location=params.device)
     model.load_state_dict(model_params)
     logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
 
@@ -110,61 +107,16 @@ def one_epoch(model, loader, vocab, params):
         output_indices = batch[1]
 
         # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        if params.cuda:
-            input_indices = input_indices.cuda()
-            output_indices = output_indices.cuda()
+        input_indices = input_indices.to(params.device)
+        output_indices = output_indices.to(params.device)
 
-        translator = Translator(params, model)
+        translator = Generator(params, model)
         all_hyp, all_scores = translator.translate_batch(input_indices)
         for i in all_hyp:
             sentence = vocab.convert_index2sentence(i[0])
             sentences_pred.append(' '.join(sentence))
         print(' '.join(vocab.convert_index2sentence(input_indices[-1])))
         print(sentences_pred[-1])
-
-        # # # 起始符号均为<s>
-        # batch_size = input_indices.size(0)
-        # output_indices = torch.zeros(batch_size, 1).long().cuda()
-        # for i, output_indice in enumerate(output_indices):
-        #     output_indices[i] = vocab.convert_word2index('<s>')
-        # # output_indices: [batch_size, output_seq_len(1)]
-
-        # # ['<s>', 'what']
-        # # output_indices = torch.tensor([[2]])
-
-        # # 如果参数中设置了使用cuda且当前cuda可用,则将数据放到cuda上
-        # if params.cuda:
-        #     input_indices = input_indices.cuda()
-        #     output_indices = output_indices.cuda()
-
-        # encoder_hiddens = model.encoder(input_indices)
-        # # encoder_hiddens: [batch_size, input_seq_len, d_model]
-
-        # # output_seq_len的取值:1,2,3,4,5,……
-        # for i in range(20):
-        #     output_indices_pred = model.decoder(output_indices, input_indices, encoder_hiddens)
-        #     # output_indices_pred: [batch_size, output_seq_len, vocab_size]
-
-        #     # 取预测最大值作为输出
-        #     indices_pred = torch.max(output_indices_pred, dim=-1)[1]
-        #     # print(vocab.convert_index2sentence(indices_pred[0], mode=False))
-        #     # indices_pred: [batch_size, output_seq_len]
-
-        #     # 取模型输出的最后一个字符
-        #     indices_pred = indices_pred[:, -1].unsqueeze(1)
-        #     # indices_pred: [batch_size, output_seq_len(1)]
-
-        #     output_indices = torch.cat((output_indices, indices_pred), dim=-1)
-        #     # output_indices: [batch_size, output_seq_len + 1]
-        
-        # # 输出预测序列
-        # for indices in output_indices:
-        #     # mode: True表示输出完整序列
-        #     #       False表示遇到</s>就停止(只输出到</s>前的序列)
-        #     sentence = vocab.convert_index2sentence(indices, mode=False)
-        #     sentence = sentence[1:]
-        #     sentences_pred.append(' '.join(sentence))
-        # print(sentence)
 
     return sentences_pred
 
@@ -210,8 +162,10 @@ if __name__ == '__main__':
     params.pred_file = os.path.join(params.main_output_dir, params.dataset_dir, params.pred_file)
     if params.cuda and torch.cuda.is_available():
         params.cuda = True
+        params.device = torch.device('cuda')
     else:
         params.cuda = False
+        params.device = torch.device('cpu')
 
     # 原始的真实输出文件位置,需要从数据目录移动到输出目录下
     params.origin_gold_file = os.path.join(params.main_data_dir, params.dataset_dir, 'test/question.txt')
@@ -230,3 +184,8 @@ if __name__ == '__main__':
 
     # 测试模型
     test_model(test_loader, vocab, params)
+
+
+    # 空两行以示尊重
+    print()
+    print()

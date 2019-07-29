@@ -122,3 +122,8 @@ if __name__ == '__main__':
                 os.path.join(params.main_data_dir, params.dataset_dir, 'test/question.txt'),
                 os.path.join(params.main_data_dir, params.dataset_dir, 'test/answer_start.txt'),
                 os.path.join(params.main_data_dir, params.dataset_dir, 'test/answer_end.txt'))
+
+
+    # 空两行以示尊重
+    print()
+    print()
