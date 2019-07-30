@@ -1,4 +1,10 @@
-### Dataset类
+#!/usr/bin/env python
+# encoding: utf-8
+'''
+Dataset类:
+(1)使用pytorch的Dataset类,将模型的输入输出数据构造为batch
+'''
+__author__ = 'qjzhzw'
 
 import numpy as np
 import torch
@@ -8,6 +14,10 @@ import torch.utils.data
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, data, mode='train'):
         '''
+        Dataset类:
+        使用pytorch的Dataset类,将模型的输入输出数据构造为batch
+
+        输入参数:
         data: 加载了的pt文件的内容
         mode: train表示是训练集的Dataset类构造
               dev表示是验证集的Dataset类构造
@@ -31,8 +41,20 @@ class Dataset(torch.utils.data.Dataset):
         assert len(self.dev_input_indices) == len(self.dev_output_indices)
         assert len(self.test_input_indices) == len(self.test_output_indices)
 
-    # 这个方法必须实现,返回每个batch的内容
     def __getitem__(self, index):
+        '''
+        作用:
+        这个方法必须实现,返回每个batch的内容
+
+        输入参数:
+        index: 每条数据的索引
+
+        输出参数:
+        input_indices: 输入序列
+        output_indices: 输出序列
+        vocab: Vocab类
+        '''
+
         # 根据mode值的不同返回不同的内容
         if self.mode == 'train':
             return self.train_input_indices[index], self.train_output_indices[index], self.vocab
@@ -41,8 +63,15 @@ class Dataset(torch.utils.data.Dataset):
         elif self.mode == 'test':
             return self.test_input_indices[index], self.test_output_indices[index], self.vocab
 
-    # 这个方法必须实现,否则会报错:NotImplementedError
     def __len__(self):
+        '''
+        作用:
+        这个方法必须实现,否则会报错:NotImplementedError
+
+        输出参数:
+        Dataset类的大小
+        '''
+
         # 根据mode值的不同返回不同的内容
         if self.mode == 'train':
             return len(self.train_input_indices)
@@ -54,10 +83,16 @@ class Dataset(torch.utils.data.Dataset):
 
 def collate_fn(data):
     '''
+    作用:
+    构造batch
+
+    输入参数:
     data: 输入的数据(即上面的__getitem__传下来的),原始的一个batch的内容
           是一个二维list,第一维是batch_size,第二维是batch中每个句子(不等长)
-    return batch_input: 输入序列的batch
-    return batch_output: 输出序列的batch
+
+    输出参数:
+    batch_input: 输入序列的batch
+    batch_output: 输出序列的batch
     '''
 
     # 对模型的输入序列和输出序列分别构造batch
@@ -69,11 +104,17 @@ def collate_fn(data):
 
 def get_batch(data, mode=0):
     '''
+    作用:
+    构造batch
+
+    输入参数:
     data: 输入的数据(即上面的__getitem__传下来的),原始的一个batch的内容
           是一个二维list,第一维是batch_size,第二维是batch中每个句子(不等长)
     mode: 0表示是输入序列
           1表示是输出序列
-    return batch: 构造好的batch
+
+    输出参数:
+    batch: 构造好的batch
     '''
 
     # 获得该batch中的最大句长

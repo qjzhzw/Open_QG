@@ -1,4 +1,10 @@
-### 基于beam search的序列生成
+#!/usr/bin/env python
+# encoding: utf-8
+'''
+Generator类:
+(1)使用beam_search策略,在给定起始符<s>的情况下进行序列生成
+'''
+__author__ = 'qjzhzw'
 
 import numpy as np
 import torch
@@ -15,7 +21,7 @@ class Generator(object):
 
         model.word_prob_prj = nn.LogSoftmax(dim=1)        
 
-    def translate_batch(self, src_seq):
+    def generate_batch(self, src_seq):
         ''' Translation work in one batch '''
 
         def get_inst_idx_to_tensor_position_map(inst_idx_list):
@@ -108,7 +114,7 @@ class Generator(object):
             src_enc = self.model.encoder(src_seq)
 
             #-- Repeat data for beam search
-            n_bm = 5 # beam_size
+            n_bm = self.params.beam_size # beam_size
             n_inst, len_s, d_h = src_enc.size()
             src_seq = src_seq.repeat(1, n_bm).view(n_inst * n_bm, len_s)
             src_enc = src_enc.repeat(1, n_bm, 1).view(n_inst * n_bm, len_s, d_h)
@@ -122,7 +128,7 @@ class Generator(object):
 
             #-- Decode
             # max_token_seq_len + 1
-            for len_dec_seq in range(1, 20):
+            for len_dec_seq in range(1, self.params.max_seq_len):
 
                 active_inst_idx_list = beam_decode_step(
                     inst_dec_beams, len_dec_seq, src_seq, src_enc, inst_idx_to_position_map, n_bm)

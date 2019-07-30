@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# encoding: utf-8
+'''
+数据测试:
+(1)对模型测试的预测结果进行评估,评价指标包括BLEU/METEOR/ROUGH-L
+'''
 __author__ = 'xinya'
 
 from bleu.bleu import Bleu

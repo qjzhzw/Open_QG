@@ -9,7 +9,7 @@
 
 
 ## 代码运行方式：
-`sh pipeline.sh [指定运行模式] [指定GPU]`  
+`./pipeline.sh [指定运行模式] [指定GPU]`  
 
 ### 指定运行模式包括：
 0: 安装依赖包  
@@ -37,12 +37,13 @@
 
 ## 文件结构介绍：
 #### 文件夹:
+/src : 存储源代码  
 /data : 存储原始数据  
 /checkpoint : 存储训练好的模型参数(需要时会自动创建)  
 /output : 存储预测文件(需要时会自动创建)  
 /evaluate : 评价结果的脚本,包含BLEU/METEOR/ROUGH-L(由Du et al., 2017提供)  
 /image : 存储README.md中所用到的图片  
-#### python文件:
+#### python文件(均在src文件夹下):
 load_dataset.py : 读取原始数据构造成文本形式(只针对SQuAD数据集)  
 preprocess.py : 数据预处理  
 train.py : 模型训练+验证  
@@ -53,6 +54,8 @@ dataset.py : Dataset类(将数据构造成batch形式)
 model.py : Model类(Transformer模型)  
 optimizer.py : Optimizer类(训练模型所使用优化器)  
 beam.py : Beam类(模型测试时所使用beam search)  
+logger.py : logger方法(项目所使用的日志输出器)  
+params.py : params方法(项目所使用的参数集合)  
 #### shell脚本:
 pipeline.sh 运行脚本  
 #### 其它文件:
