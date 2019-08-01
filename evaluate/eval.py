@@ -17,6 +17,8 @@ import os
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+sys.path.append('/data/jzqiu/Open_QG/src')
+from params import params
 
 class QGEvalCap:
     def __init__(self, gts, res):
@@ -97,15 +99,9 @@ def eval(out_file, src_file, tgt_file, isDIn = False, num_pairs = 500):
     return QGEval.evaluate()
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("--dataset_dir", type=str, default="squad")
-    args = parser.parse_args()
-    parser.add_argument("--out", "--out_file", dest="out_file", default=os.path.join("output", args.dataset_dir, "pred.txt"), help="output file to compare")
-    parser.add_argument("--src", "--src_file", dest="src_file", default=os.path.join("output", args.dataset_dir, "gold.txt"), help="src file")
-    parser.add_argument("--tgt", "--tgt_file", dest="tgt_file", default=os.path.join("output", args.dataset_dir, "gold.txt"), help="target file")
-    args = parser.parse_args()
+    params = params()
 
     print("scores: ")
-    results = eval(args.out_file, args.src_file, args.tgt_file)
+    results = eval(params.pred_file, params.gold_file, params.gold_file)
 
 

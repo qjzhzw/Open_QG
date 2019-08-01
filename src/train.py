@@ -270,6 +270,7 @@ if __name__ == '__main__':
     logger = logger()
     params = params()
     params.load_model = False
+    params.print_model = True
 
     # 打印参数列表
     if params.print_params:

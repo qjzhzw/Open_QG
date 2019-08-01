@@ -24,7 +24,7 @@ def params():
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
     parser.add_argument('--main_checkpoint_dir', type=str, default='checkpoint', help='输出的模型参数目录')
     parser.add_argument('--main_output_dir', type=str, default='output', help='输出的预测文件目录')
-    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='multilingual/EN', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--origin_dir', type=str, default='origin', help='原始数据所在子目录')
     parser.add_argument('--train_dir', type=str, default='train', help='训练集数据所在子目录')
     parser.add_argument('--dev_dir', type=str, default='dev', help='验证集数据所在子目录')
@@ -67,7 +67,7 @@ def params():
 
     # 模型超参数相关
     parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
-    parser.add_argument('--num_layers', type=int, default=6, help='transformer模型超参数:num_layers')
+    parser.add_argument('--num_layers', type=int, default=2, help='transformer模型超参数:num_layers')
     parser.add_argument('--num_heads', type=int, default=8, help='transformer模型超参数:num_heads')
     parser.add_argument('--d_model', type=int, default=512, help='transformer模型超参数:d_model')
     parser.add_argument('--d_k', type=int, default=64, help='transformer模型超参数:d_k')
@@ -118,9 +118,11 @@ def params():
     # 如果设置cuda且当前cuda可用,则设定为在cuda环境下运行
     if params.cuda and torch.cuda.is_available():
         params.cuda = True
-        params.device = torch.device('cuda')
+        if params.__contains__('device'):
+            params.device = torch.device('cuda')
     else:
         params.cuda = False
-        params.device = torch.device('cpu')
+        if params.__contains__('device'):
+            params.device = torch.device('cpu')
 
     return params

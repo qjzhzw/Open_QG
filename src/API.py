@@ -11,19 +11,20 @@ __author__ = 'qjzhzw'
 import os
 import torch
 
-from logger import logger
-from params import params
-from vocab import Vocab
-from model import Model
-from beam import Generator
+from .logger import logger
+from .params import params
+from .vocab import Vocab
+from .model import Model
+from .beam import Generator
 
 
-def test_demo(params, vocab, input_sentence):
+def test_demo(logger, params, vocab, input_sentence):
     '''
     作用:
     测试demo
 
     输入参数:
+    logger: 日志输出器
     params: 参数集合
     vocab: 从pt文件中读取的该任务所使用的vocab
     input_sentence: 输入句子(文本形式)
@@ -91,24 +92,36 @@ def demo(input_sentence, input_answer):
     输出参数:
     output_question: 输出问题(文本形式)
     '''
+    
+    from .logger import logger
+    from .params import params
+    from .vocab import Vocab
+    from .model import Model
+    from .beam import Generator
+
     # 加载日志输出器和参数集合
     logger = logger()
     params = params()
-    params.max_seq_len = 30
 
     # 打印参数列表
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
     # 从已保存的pt文件中读取vocab
-    data = torch.load(params.temp_pt_file)
-    vocab = data['vocab']
+    vocab_file = open(params.vocab_file)
+    vocab = Vocab(params)
+    for line in vocab_file:
+        line = line.split()
+        word = line[0]
+        index = int(line[1])
+        if not vocab.has_word(word):
+            vocab.add_element(word, index)
 
     input_sentence = '<cls> ' + input_sentence + ' <sep> ' + input_answer + ' <sep>'
     logger.info('输入句子的文本形式为 : {}'.format(input_sentence))
 
     # 测试demo
-    output_question = test_demo(params, vocab, input_sentence)
+    output_question = test_demo(logger, params, vocab, input_sentence)
 
     logger.info('输出问题的文本形式为 : {}'.format(output_question))
 
