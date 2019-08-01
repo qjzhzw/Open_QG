@@ -57,12 +57,12 @@ def params():
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
 
     # 训练器超参数相关
+    parser.add_argument('--num_epochs', type=int, default=2, help='模型超参数:num_epochs(模型训练/验证中设置)')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(优化器中设置)')
     parser.add_argument('--warmup_steps', type=int, default=4000, help='模型超参数:warmup_steps(优化器中设置)')
     parser.add_argument('--label_smoothing_eps', type=float, default=0.1, help='模型超参数:标签平滑归一化(计算损失时设置)')
-    parser.add_argument('--num_epochs', type=int, default=1, help='模型超参数:num_epochs(模型训练/验证中设置)')
     parser.add_argument('--beam_size', type=int, default=5, help='模型超参数:beam_size(模型测试中设置)')
 
     # 模型超参数相关

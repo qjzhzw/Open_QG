@@ -107,12 +107,13 @@ def train_model(params, vocab, train_loader, dev_loader):
 
         # 存储每一轮验证集的损失
         total_loss_epochs.append(total_loss)
+        logger.info('第{}轮的验证集的损失为{},当前最好模型的损失为{}'.format(epoch, total_loss, min(total_loss_epochs)))
 
         # 将训练好的模型参数存入本地文件
         if not os.path.exists(params.checkpoint_dir):
             os.makedirs(params.checkpoint_dir)
         # 根据验证集损失最小来挑选最好的模型进行保存
-        if total_loss == max(total_loss_epochs):
+        if total_loss == min(total_loss_epochs):
             torch.save(model.state_dict(), params.checkpoint_file)
             logger.info('第{}轮的模型参数已经保存至{}'.format(epoch, params.checkpoint_file))
 
@@ -268,6 +269,7 @@ if __name__ == '__main__':
     # 加载日志输出器和参数集合
     logger = logger()
     params = params()
+    params.load_model = False
 
     # 打印参数列表
     if params.print_params:
