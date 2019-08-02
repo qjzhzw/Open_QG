@@ -9,7 +9,6 @@ __author__ = 'qjzhzw'
 
 import argparse
 import os
-import torch
 
 
 def params():
@@ -24,7 +23,7 @@ def params():
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
     parser.add_argument('--main_checkpoint_dir', type=str, default='checkpoint', help='输出的模型参数目录')
     parser.add_argument('--main_output_dir', type=str, default='output', help='输出的预测文件目录')
-    parser.add_argument('--dataset_dir', type=str, default='multilingual/EN', help='任务所使用的数据集所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--origin_dir', type=str, default='origin', help='原始数据所在子目录')
     parser.add_argument('--train_dir', type=str, default='train', help='训练集数据所在子目录')
     parser.add_argument('--dev_dir', type=str, default='dev', help='验证集数据所在子目录')
@@ -116,13 +115,15 @@ def params():
     params.max_seq_len = params.max_seq_len - 2
 
     # 如果设置cuda且当前cuda可用,则设定为在cuda环境下运行
-    if params.cuda and torch.cuda.is_available():
-        params.cuda = True
-        if params.__contains__('device'):
+    try:
+        import torch
+        if params.cuda and torch.cuda.is_available():
+            params.cuda = True
             params.device = torch.device('cuda')
-    else:
-        params.cuda = False
-        if params.__contains__('device'):
+        else:
+            params.cuda = False
             params.device = torch.device('cpu')
+    except:
+        pass
 
     return params

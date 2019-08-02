@@ -17,7 +17,10 @@ import os
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
-sys.path.append('/data/jzqiu/Open_QG/src')
+
+current_dir = os.path.abspath(os.path.dirname(__file__))
+src_dir = os.path.join(current_dir, '..', 'src')
+sys.path.append(src_dir)
 from params import params
 
 class QGEvalCap:
