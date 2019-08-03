@@ -98,4 +98,16 @@ else
         demo
         echo ""
     fi
+    if [[ $(echo $1 | grep "7") != "" ]]; then
+        echo ""
+        echo "指定运行模式为'交替测试'"
+        echo "指定的GPU为$2"
+        for i in {1..5}
+        do
+            train
+            test
+            evaluate
+        done
+        echo ""
+    fi
 fi

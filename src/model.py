@@ -64,11 +64,16 @@ class Encoder(nn.Module):
         self.vocab_size = len(self.vocab)
 
         # 构造掩膜和位置信息
-        self.mask_and_position = Mask_and_position(self.params)
+        self.utils = Utils(self.params)
 
         # embedding层,将索引/位置信息转换为词向量
         self.word_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
         self.position_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
+
+        # 如果有预训练的词向量,则使用预训练的词向量进行权重初始化
+        if self.params.load_embeddings:
+            weights = self.utils.init_embeddings(self.vocab)
+            self.word_embedding_encoder = nn.Embedding.from_pretrained(weights)
 
         # 多个相同子结构组成的encoder子层,层数为num_layers
         self.encoder_layers = nn.ModuleList([Encoder_layer(self.params) for _ in range(self.params.num_layers)])
@@ -86,10 +91,12 @@ class Encoder(nn.Module):
         '''
 
         # 构造掩膜和位置信息
-        input_indices_positions = self.mask_and_position.build_positions(input_indices)
-        encoder_self_attention_masks = self.mask_and_position.build_pad_masks(query=input_indices, key=input_indices)
+        input_indices_positions = self.utils.build_positions(input_indices)
+        encoder_self_attention_masks = self.utils.build_pad_masks(query=input_indices, key=input_indices)
         # input_indices_positions: [batch_size, input_seq_len]
         # encoder_self_attention_masks: [batch_size, input_seq_len, input_seq_len]
+
+        print(input_indices[0][0], self.word_embedding_encoder(input_indices)[0][0][:10])
 
         # 将索引/位置信息转换为词向量
         input_indices = self.word_embedding_encoder(input_indices) + \
@@ -128,11 +135,16 @@ class Decoder(nn.Module):
         self.vocab_size = len(self.vocab)
 
         # 构造掩膜和位置信息
-        self.mask_and_position = Mask_and_position(self.params)
+        self.utils = Utils(self.params)
 
         # embedding层,将索引/位置信息转换为词向量
         self.word_embedding_decoder = nn.Embedding(self.vocab_size, self.params.d_model)
         self.position_embedding_decoder = nn.Embedding(self.vocab_size, self.params.d_model)
+
+        # 如果有预训练的词向量,则使用预训练的词向量进行权重初始化
+        if self.params.load_embeddings:
+            weights = self.utils.init_embeddings(self.vocab)
+            self.word_embedding_decoder = nn.Embedding.from_pretrained(weights)
 
         # 多个相同子结构组成的decoder子层,层数为num_layers
         self.decoder_layers = nn.ModuleList([Decoder_layer(self.params) for _ in range(self.params.num_layers)])
@@ -155,10 +167,10 @@ class Decoder(nn.Module):
         '''
 
         # 构造掩膜和位置信息
-        output_indices_positions = self.mask_and_position.build_positions(output_indices)
-        decoder_mutual_attention_masks = self.mask_and_position.build_pad_masks(query=output_indices, key=input_indices)
-        decoder_self_attention_masks = (self.mask_and_position.build_pad_masks(query=output_indices, key=output_indices) * \
-                                        self.mask_and_position.build_triu_masks(output_indices)).gt(0)
+        output_indices_positions = self.utils.build_positions(output_indices)
+        decoder_mutual_attention_masks = self.utils.build_pad_masks(query=output_indices, key=input_indices)
+        decoder_self_attention_masks = (self.utils.build_pad_masks(query=output_indices, key=output_indices) * \
+                                        self.utils.build_triu_masks(output_indices)).gt(0)
         # output_indices_positions: [batch_size, output_seq_len]
         # decoder_mutual_attention_masks: [batch_size, output_seq_len, input_seq_len]
         # decoder_self_attention_masks: [batch_size, output_seq_len, output_seq_len]
@@ -223,7 +235,7 @@ class Encoder_layer(nn.Module):
         '''
 
         # 经过self_attention结构
-        input_indices = self.self_attention(query=input_indices,
+        input_indices, _ = self.self_attention(query=input_indices,
                                             key=input_indices,
                                             value=input_indices,
                                             mask=encoder_self_attention_masks)
@@ -271,14 +283,14 @@ class Decoder_layer(nn.Module):
         '''
 
         # 经过self_attention结构
-        output_indices = self.self_attention(query=output_indices,
+        output_indices, _ = self.self_attention(query=output_indices,
                                              key=output_indices,
                                              value=output_indices,
                                              mask=decoder_self_attention_masks)
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过mutual_attention结构
-        output_indices = self.mutual_attention(query=output_indices,
+        output_indices, _ = self.mutual_attention(query=output_indices,
                                                key=encoder_hiddens,
                                                value=encoder_hiddens,
                                                mask=decoder_mutual_attention_masks)
@@ -391,7 +403,7 @@ class Multihead_attention(nn.Module):
         indices = self.layer_norm(indices)
         # indices: [batch_size, seq_len_query, d_model]
 
-        return indices
+        return indices, attention
 
 
 class Feedforward_network(nn.Module):
@@ -446,10 +458,10 @@ class Feedforward_network(nn.Module):
         return indices
 
 
-class Mask_and_position():
+class Utils():
     def __init__(self, params):
         '''
-        Mask_and_position类:
+        Utils类:
         构造掩膜和位置信息
 
         输入参数:
@@ -550,3 +562,25 @@ class Mask_and_position():
         # [batch_size, seq_len, seq_len]
 
         return indices_triu_masks
+
+    def init_embeddings(self, vocab):
+        '''
+        作用:
+        加载预训练的词向量权重
+
+        输入参数:
+        vocab: Vocab类
+
+        输出参数:
+        weights: [vocab_size, d_model]
+        '''
+
+        # 从Vocab类中按索引读取每个词的词向量
+        weights = []
+        for element in vocab.vocab:
+            weights.append(element.embedding)
+
+        # 将二维list的batch直接转换为tensor的形式
+        weights = torch.tensor(weights).to(self.params.device)
+
+        return weights

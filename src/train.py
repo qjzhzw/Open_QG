@@ -269,8 +269,6 @@ if __name__ == '__main__':
     # 加载日志输出器和参数集合
     logger = logger()
     params = params()
-    params.load_model = False
-    params.print_model = True
 
     # 打印参数列表
     if params.print_params:

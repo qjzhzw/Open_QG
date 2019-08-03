@@ -10,6 +10,7 @@ __author__ = 'qjzhzw'
 
 import json
 import os
+import random
 import torch
 
 from logger import logger
@@ -116,19 +117,28 @@ def build_vocab(params, sentences):
 
     # 构造vocab
     vocab = Vocab(params)
+    if vocab.word2embedding:
+        logger.info('从{}中成功加载词向量{}'.format(params.embedding_file, len(vocab.word2embedding)))
+
     # vocab在建立时,就已经包含了一定数量的常数,因此根据数据集添加单词时并不是以0作为起始索引
     index = len(vocab)
     for item in word_freq:
         word = item[0]
         freq = item[1]
+
+        # 如果单词有预训练的词向量,就将其作为该单词的词向量
+        embedding = None
+        if word in vocab.word2embedding.keys():
+            embedding = vocab.word2embedding[word]
+
         # 如果单词不在vocab中,就添加进去,否则放弃掉
         if not vocab.has_word(word):
-            vocab.add_element(word, index, freq)
+            vocab.add_element(word, index, freq, embedding)
             index += 1
 
     # 将构造的vocab中,每个元素的信息(单词/索引)输出到文件中
     for element in vocab.vocab:
-        f_vocab.write('{} {} {}\n'.format(element.word, element.index, element.freq))
+        f_vocab.write('{} {} {} {}\n'.format(element.word, element.index, element.freq, element.embedding))
     logger.info('构造的vocab大小为{}'.format(len(vocab)))
 
     return vocab

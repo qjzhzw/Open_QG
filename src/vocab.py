@@ -7,6 +7,7 @@ Vocab类:
 '''
 __author__ = 'qjzhzw'
 
+import random
 import torch
 
 
@@ -25,6 +26,14 @@ class Vocab():
         self.vocab = []
         self.word2index = {}
         self.index2word = {}
+        self.word2embedding = {}
+
+        # 从文件中加载所有单词的embedding
+        self.embedding_size = self.params.d_model
+        if self.params.load_embeddings:
+            self.load_embeddings()
+            # 断言: embedding_size和d_model相同
+            assert self.embedding_size == self.params.d_model
 
         # 将常数加入到vocab中
         # <pad>: batch中由于数据长度要统一,因此多余部分均填<pad>
@@ -50,6 +59,13 @@ class Vocab():
         embedding: 需要添加元素的词向量(可选)
         '''
 
+        # 如果传入的freq和embedding参数为空,进行初始化
+        if freq == None:
+            freq = 0
+        if embedding == None:
+            embedding = [random.uniform(-0.5, 0.5) for i in range(self.embedding_size)]
+
+        # 在Vocab类中加入一个元素
         self.vocab.append(Vocab_element(word, index, freq, embedding))
         self.word2index[word] = index
         self.index2word[index] = word
@@ -174,6 +190,25 @@ class Vocab():
             else:
                 sentence.append(self.convert_index2word(index))
         return sentence
+
+    def load_embeddings(self):
+        '''
+        作用:
+        从文件中加载所有单词的词向量
+        '''
+
+        lines = open(self.params.embedding_file, 'r').readlines()
+        for line in lines:
+            line = line.split()
+
+            # 每一行的结构: index(1维) word(1维) embedding(300维)
+            word = line[1]
+            embedding = line[-self.embedding_size:]
+
+            # 将文件中的str类型转换为float类型
+            embedding = [float(emb) for emb in embedding]
+            self.word2embedding[word] = embedding
+            self.embedding_size = len(embedding)
 
 
 class Vocab_element():

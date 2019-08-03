@@ -45,10 +45,10 @@ class QGEvalCap:
             score, scores = scorer.compute_score(self.gts, self.res)
             if type(method) == list:
                 for sc, scs, m in zip(score, scores, method):
-                    print("%s: %0.5f"%(m, sc))
+                    print("%s: %0.2f"%(m, sc*100))
                     output.append(sc)
             else:
-                print("%s: %0.5f"%(method, score))
+                print("%s: %0.2f"%(method, score*100))
                 output.append(score)
         return output
 

@@ -37,6 +37,7 @@ def params():
     parser.add_argument('--question_file', type=str, default='question.txt', help='模型输出(问题)')
     parser.add_argument('--answer_start_file', type=str, default='answer_start.txt', help='模型输入(答案开始位置)')
     parser.add_argument('--answer_end_file', type=str, default='answer_end.txt', help='模型输出(答案结束位置)')
+    parser.add_argument('--embedding_file', type=str, default='embedding.txt', help='词向量的文件位置')
     parser.add_argument('--vocab_file', type=str, default='vocab.txt', help='vocab位置')
     parser.add_argument('--temp_pt_file', type=str, default='data.pt', help='暂存的pt文件位置')
     parser.add_argument('--checkpoint_file', type=str, default='checkpoint.pt', help='输出的模型参数位置')
@@ -53,10 +54,11 @@ def params():
     parser.add_argument('--max_seq_len', type=int, default=50, help='句子最大长度(多余的进行截短)')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
+    parser.add_argument('--load_embeddings', type=bool, default=False, help='是否加载预训练的词向量')
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
 
     # 训练器超参数相关
-    parser.add_argument('--num_epochs', type=int, default=2, help='模型超参数:num_epochs(模型训练/验证中设置)')
+    parser.add_argument('--num_epochs', type=int, default=1, help='模型超参数:num_epochs(模型训练/验证中设置)')
     parser.add_argument('--num_workers', type=int, default=0, help='模型超参数:num_workers(DataLoader中设置)')
     parser.add_argument('--batch_size', type=int, default=32, help='模型超参数:batch_size(批训练大小,DataLoader中设置)')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='模型超参数:learning_rate(优化器中设置)')
@@ -65,10 +67,9 @@ def params():
     parser.add_argument('--beam_size', type=int, default=5, help='模型超参数:beam_size(模型测试中设置)')
 
     # 模型超参数相关
-    parser.add_argument('--embedding_size', type=int, default=512, help='transformer模型超参数:embedding_size(词向量维度,在transformer模型中和d_model一致)')
-    parser.add_argument('--num_layers', type=int, default=2, help='transformer模型超参数:num_layers')
+    parser.add_argument('--num_layers', type=int, default=8, help='transformer模型超参数:num_layers')
     parser.add_argument('--num_heads', type=int, default=8, help='transformer模型超参数:num_heads')
-    parser.add_argument('--d_model', type=int, default=512, help='transformer模型超参数:d_model')
+    parser.add_argument('--d_model', type=int, default=300, help='transformer模型超参数:d_model')
     parser.add_argument('--d_k', type=int, default=64, help='transformer模型超参数:d_k')
     parser.add_argument('--d_v', type=int, default=64, help='transformer模型超参数:d_v')
     parser.add_argument('--d_ff', type=int, default=2048, help='transformer模型超参数:d_ff')
@@ -101,6 +102,7 @@ def params():
     params.test_answer_start_file = os.path.join(params.test_dir, params.answer_start_file)
     params.test_answer_end_file = os.path.join(params.test_dir, params.answer_end_file)
 
+    params.embedding_file = os.path.join(params.origin_dir, params.embedding_file)
     params.vocab_file = os.path.join(params.main_data_dir, params.dataset_dir, params.vocab_file)
     params.temp_pt_file = os.path.join(params.main_data_dir, params.dataset_dir, params.temp_pt_file)
 
