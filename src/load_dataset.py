@@ -8,17 +8,19 @@ __author__ = 'qjzhzw'
 
 import json
 import os
+import random
 
 from logger import logger
 from params import params
 
 
-def load_dataset(origin_file, sentence_file, question_file, answer_start_file, answer_end_file):
+def load_dataset(params, origin_file, sentence_file, question_file, answer_start_file, answer_end_file):
     '''
     作用:
     将json形式的原始文件中的[句子/问题/答案]三元组转换为txt形式
 
     输入参数:
+    params: 参数集合
     origin_file: 输入的原始文件
     sentence_file: 输出的句子文件
     question_file: 输出的问题文件
@@ -52,8 +54,8 @@ def load_dataset(origin_file, sentence_file, question_file, answer_start_file, a
         answer = answer.split()
 
         # 找到答案起止位置
-        answer_start = None
-        answer_end = None
+        answer_start = 0
+        answer_end = 0
         for index in range(len(sentence)):
             if answer == sentence[index : index + len(answer)]:
                 answer_start = index
@@ -62,14 +64,15 @@ def load_dataset(origin_file, sentence_file, question_file, answer_start_file, a
 
         # 将句子和答案连接起来(类似于bert中的做法)
         # <cls> 句子 <sep> 答案 <sep>
-        sentence.insert(0, '<cls>')
-        sentence.append('<sep>')
-        sentence.extend(answer)
-        sentence.append('<sep>')
+        if params.with_answer:
+            sentence.insert(0, '<cls>')
+            sentence.append('<sep>')
+            sentence.extend(answer)
+            sentence.append('<sep>')
 
         # 将处理好的数据存入本地文件
         # 如果得到的答案为空,则放弃该条数据
-        if answer_start != None and answer_end != None:
+        if params.full_data or (answer_start != 0 or answer_end != 0):
             f_sentence.write(' '.join(sentence) + '\n')
             f_question.write(' '.join(question) + '\n')
             f_answer_start.write(str(answer_start) + '\n')
@@ -83,6 +86,76 @@ def load_dataset(origin_file, sentence_file, question_file, answer_start_file, a
     f_answer_end.close()
 
     logger.info('从{}中加载原始数据{}, 其中成功加载数据{}'.format(origin_file, total, num))
+
+
+def load_dataset_translation(params, origin_sentence_file, origin_question_file,
+                             train_sentence_file, train_question_file,
+                             dev_sentence_file, dev_question_file,
+                             test_sentence_file, test_question_file):
+    '''
+    作用:
+    将txt形式的原始文件中进行划分得到训练集/验证集/测试集
+
+    输入参数:
+    params: 参数集合
+    origin_sentence_file: 输入的句子文件
+    origin_question_file: 输入的问题文件
+    train_sentence_file: 输出的训练集的句子文件
+    train_question_file: 输出的训练集的问题文件
+    dev_sentence_file: 输出的验证集的句子文件
+    dev_question_file: 输出的验证集的问题文件
+    test_sentence_file: 输出的测试集的句子文件
+    test_question_file: 输出的测试集的问题文件
+    '''
+
+    # 将原始数据加载进来
+    sentences = open(origin_sentence_file, 'r').readlines()
+    questions = open(origin_question_file, 'r').readlines()
+
+    # 打乱原始数据(耗时间)
+    zip_instances = list(zip(sentences, questions))
+    random.shuffle(zip_instances)
+    sentences, questions = zip(*zip_instances)
+
+    # 断言: 句子和问题数量一致
+    assert len(sentences) == len(questions)
+    total = len(sentences)
+
+    logger.info('总数据量{}'.format(total))
+
+    # 所有输出文件
+    f_train_sentence_file = open(train_sentence_file, 'w')
+    f_train_question_file = open(train_question_file, 'w')
+    f_dev_sentence_file = open(dev_sentence_file, 'w')
+    f_dev_question_file = open(dev_question_file, 'w')
+    f_test_sentence_file = open(test_sentence_file, 'w')
+    f_test_question_file = open(test_question_file, 'w')
+
+    # 划分训练集/验证集/测试集
+    sentences_train = sentences[ : int(total * 0.007)]
+    questions_train = questions[ : int(total * 0.007)]
+    sentences_dev = sentences[int(total * 0.007) : int(total * 0.008)]
+    questions_dev = questions[int(total * 0.007) : int(total * 0.008)]
+    sentences_test = sentences[int(total * 0.008) : int(total * 0.010)]
+    questions_test = questions[int(total * 0.008) : int(total * 0.010)]
+
+    # 存入本地文件
+    for sentence in sentences_train:
+        f_train_sentence_file.write(sentence)
+    for sentence in questions_train:
+        f_train_question_file.write(sentence)
+    for sentence in sentences_dev:
+        f_dev_sentence_file.write(sentence)
+    for sentence in questions_dev:
+        f_dev_question_file.write(sentence)
+    for sentence in sentences_test:
+        f_test_sentence_file.write(sentence)
+    for sentence in questions_test:
+        f_test_question_file.write(sentence)
+
+    logger.info('训练集{}'.format(len(sentences_train)))
+    logger.info('验证集{}'.format(len(sentences_dev)))
+    logger.info('测试集{}'.format(len(sentences_test)))
 
 
 if __name__ == '__main__':
@@ -103,19 +176,32 @@ if __name__ == '__main__':
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
-    # 加载数据集
-    load_dataset(params.origin_train_file,
-                 params.train_sentence_file,
-                 params.train_question_file,
-                 params.train_answer_start_file,
-                 params.train_answer_end_file),
-    load_dataset(params.origin_dev_file,
-                 params.dev_sentence_file,
-                 params.dev_question_file,
-                 params.dev_answer_start_file,
-                 params.dev_answer_end_file)
-    load_dataset(params.origin_test_file,
-                 params.test_sentence_file,
-                 params.test_question_file,
-                 params.test_answer_start_file,
-                 params.test_answer_end_file)
+    # # 加载数据集
+    # load_dataset(params,
+    #              params.origin_train_file,
+    #              params.train_sentence_file,
+    #              params.train_question_file,
+    #              params.train_answer_start_file,
+    #              params.train_answer_end_file),
+    # load_dataset(params,
+    #              params.origin_dev_file,
+    #              params.dev_sentence_file,
+    #              params.dev_question_file,
+    #              params.dev_answer_start_file,
+    #              params.dev_answer_end_file)
+    # load_dataset(params,
+    #              params.origin_test_file,
+    #              params.test_sentence_file,
+    #              params.test_question_file,
+    #              params.test_answer_start_file,
+    #              params.test_answer_end_file)
+
+    load_dataset_translation(params,
+                             params.origin_sentence_file,
+                             params.origin_question_file,
+                             params.train_sentence_file,
+                             params.train_question_file,
+                             params.dev_sentence_file,
+                             params.dev_question_file,
+                             params.test_sentence_file,
+                             params.test_question_file)

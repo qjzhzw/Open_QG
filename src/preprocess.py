@@ -87,13 +87,14 @@ def load_answer(answer_start_file, answer_end_file):
     return answers
 
 
-def build_vocab(params, sentences):
+def build_vocab(params, vocab_file, sentences):
     '''
     作用:
     根据文本数据构造vocab
 
     输入参数:
     params: 参数集合
+    vocab_file: vocab文件所在位置
     sentences: 输入所有样本
 
     输出参数:
@@ -113,7 +114,7 @@ def build_vocab(params, sentences):
     word_freq = sorted(word_freq.items(), key=lambda word: word[1], reverse=True)
 
     # 输出文件
-    f_vocab = open(params.vocab_file, 'w')
+    f_vocab = open(vocab_file, 'w')
 
     # 构造vocab
     vocab = Vocab(params)
@@ -140,6 +141,38 @@ def build_vocab(params, sentences):
     for element in vocab.vocab:
         f_vocab.write('{} {} {} {}\n'.format(element.word, element.index, element.freq, element.embedding))
     logger.info('构造的vocab大小为{}'.format(len(vocab)))
+
+    return vocab
+
+
+def load_vocab(params, vocab_file):
+    '''
+    作用:
+    从预先设定好的vocab文件中加载vocab
+
+    输入参数:
+    params: 参数集合
+    vocab_file: vocab文件所在位置
+
+    输出参数:
+    vocab: 输出Vocab类,其中包含了数据集中的所有单词
+    '''
+
+    # 从已保存的vocab文件中读取vocab
+    vocab_file = open(vocab_file, 'r')
+    vocab = Vocab(params)
+
+    # 逐行导入vocab元素
+    for line in vocab_file:
+        line = line.split()
+        word = line[0]
+        index = int(line[1])
+        freq = line[2]
+        embedding = line[3:]
+        if not vocab.has_word(word):
+            vocab.add_element(word, index, freq, embedding)
+
+    logger.info('加载的vocab大小为{}'.format(len(vocab)))
 
     return vocab
 
@@ -176,28 +209,36 @@ if __name__ == '__main__':
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
-    # 将文件中的输出转化为二维list
+    # 将文件中的输出转换为二维list
     train_input_sentences = load_dataset(params, params.train_sentence_file)
     train_output_sentences = load_dataset(params, params.train_question_file)
-    train_answers = load_answer(params.train_answer_start_file, params.train_answer_end_file)
     dev_input_sentences = load_dataset(params, params.dev_sentence_file)
     dev_output_sentences = load_dataset(params, params.dev_question_file)
-    dev_answers = load_answer(params.dev_answer_start_file, params.dev_answer_end_file)
     test_input_sentences = load_dataset(params, params.test_sentence_file)
     test_output_sentences = load_dataset(params, params.test_question_file)
-    test_answers = load_answer(params.test_answer_start_file, params.test_answer_end_file)
+    if params.with_answer:
+        train_answers = load_answer(params.train_answer_start_file, params.train_answer_end_file)
+        dev_answers = load_answer(params.dev_answer_start_file, params.dev_answer_end_file)
+        test_answers = load_answer(params.test_answer_start_file, params.test_answer_end_file)
 
     # 断言:[句子/问题/答案]数量一致
-    assert len(train_input_sentences) == len(train_output_sentences) == len(train_answers)
-    assert len(dev_input_sentences) == len(dev_output_sentences) == len(dev_answers)
-    assert len(test_input_sentences) == len(test_output_sentences) == len(test_answers)
+    assert len(train_input_sentences) == len(train_output_sentences) 
+    assert len(dev_input_sentences) == len(dev_output_sentences)
+    assert len(test_input_sentences) == len(test_output_sentences)
+    if params.with_answer:
+        assert len(train_input_sentences) == len(train_answers)
+        assert len(dev_input_sentences) == len(dev_answers)
+        assert len(test_input_sentences) == len(test_answers)
 
-    # 构造vocab
-    vocab = build_vocab(params,
-                        train_input_sentences + \
-                        train_output_sentences + \
-                        dev_input_sentences + \
-                        dev_output_sentences)
+    # 加载/构造vocab
+    if params.load_vocab and os.path.exists(params.vocab_file):
+        vocab = load_vocab(params, params.vocab_file)
+    else:
+        vocab = build_vocab(params, params.vocab_file,
+                            train_input_sentences + \
+                            train_output_sentences + \
+                            dev_input_sentences + \
+                            dev_output_sentences)
 
     # 将单词转化为index
     train_input_indices = convert_sentence2index(train_input_sentences, vocab)

@@ -38,7 +38,7 @@ class Model(nn.Module):
         output_indices: [batch_size, output_seq_len]
 
         输出参数:
-        output_indices: [batch_size, vocab_size, output_seq_len]
+        output_indices: [batch_size, output_seq_len, vocab_size]
         '''
 
         encoder_hiddens = self.encoder(input_indices)
@@ -73,7 +73,7 @@ class Encoder(nn.Module):
         # 如果有预训练的词向量,则使用预训练的词向量进行权重初始化
         if self.params.load_embeddings:
             weights = self.utils.init_embeddings(self.vocab)
-            self.word_embedding_encoder = nn.Embedding.from_pretrained(weights)
+            self.word_embedding_encoder = nn.Embedding.from_pretrained(weights, freeze=self.params.train_embeddings)
 
         # 多个相同子结构组成的encoder子层,层数为num_layers
         self.encoder_layers = nn.ModuleList([Encoder_layer(self.params) for _ in range(self.params.num_layers)])
@@ -95,8 +95,6 @@ class Encoder(nn.Module):
         encoder_self_attention_masks = self.utils.build_pad_masks(query=input_indices, key=input_indices)
         # input_indices_positions: [batch_size, input_seq_len]
         # encoder_self_attention_masks: [batch_size, input_seq_len, input_seq_len]
-
-        print(input_indices[0][0], self.word_embedding_encoder(input_indices)[0][0][:10])
 
         # 将索引/位置信息转换为词向量
         input_indices = self.word_embedding_encoder(input_indices) + \
@@ -144,13 +142,17 @@ class Decoder(nn.Module):
         # 如果有预训练的词向量,则使用预训练的词向量进行权重初始化
         if self.params.load_embeddings:
             weights = self.utils.init_embeddings(self.vocab)
-            self.word_embedding_decoder = nn.Embedding.from_pretrained(weights)
+            self.word_embedding_decoder = nn.Embedding.from_pretrained(weights, freeze=self.params.train_embeddings)
 
         # 多个相同子结构组成的decoder子层,层数为num_layers
         self.decoder_layers = nn.ModuleList([Decoder_layer(self.params) for _ in range(self.params.num_layers)])
 
         # 输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         self.output = nn.Linear(self.params.d_model, self.vocab_size)
+
+        # copy机制所用的门控
+        self.copy_gate = nn.Linear(self.params.d_model, 1)
+        self.copy_sigmoid = nn.Sigmoid()
 
         # 测试所使用GRU
         self.GRU_decoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
@@ -165,6 +167,8 @@ class Decoder(nn.Module):
         输出参数:
         output_indices: [batch_size, output_seq_len, vocab_size]
         '''
+        # print('输出句子 : {}'.format(self.vocab.convert_index2sentence(output_indices[-1])))
+        # print('输入句子 : {}'.format(self.vocab.convert_index2sentence(input_indices[-1])))
 
         # 构造掩膜和位置信息
         output_indices_positions = self.utils.build_positions(output_indices)
@@ -182,15 +186,31 @@ class Decoder(nn.Module):
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for decoder_layer in self.decoder_layers:
-            output_indices = decoder_layer(output_indices,
-                                           encoder_hiddens,
-                                           decoder_self_attention_masks,
-                                           decoder_mutual_attention_masks)
+            output_indices, attention = decoder_layer(output_indices,
+                                                      encoder_hiddens,
+                                                      decoder_self_attention_masks,
+                                                      decoder_mutual_attention_masks,
+                                                      self.vocab)
         # output_indices: [batch_size, output_seq_len, d_model]
+        # attention: [batch_size, output_seq_len, input_seq_len]
+
+        if self.params.with_copy:
+            copy_gate = self.copy_gate(output_indices)
+            copy_gate = self.copy_sigmoid(copy_gate)
+            # copy_gate: [batch_size, output_seq_len, 1]
 
         # 经过输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         output_indices = self.output(output_indices)
         # output_indices: [batch_size, output_seq_len, vocab_size]
+
+        if self.params.with_copy:
+            # copy机制
+            copy_indices = self.copy(attention, input_indices, output_indices)
+            # copy_indices: [batch_size, output_seq_len, vocab_size]
+
+            output_indices = copy_gate * copy_indices + (1 - copy_gate) * output_indices
+            # print(copy_gate[-1].squeeze())
+            # output_indices: [batch_size, output_seq_len, vocab_size]
 
         # # 测试所使用GRU
         # output_indices = self.word_embedding_decoder(output_indices)
@@ -203,6 +223,42 @@ class Decoder(nn.Module):
         # # output_indices: [batch_size, output_seq_len, vocab_size]
 
         return output_indices
+
+    def copy(self, attention, input_indices, output_indices):
+        '''
+        作用:
+        copy机制
+
+        输入:
+        attention: [batch_size, output_seq_len, input_seq_len]
+        input_indices: [batch_size, input_seq_len]
+        output_indices: [batch_size, output_seq_len, vocab_size]
+
+        输出:
+        copy_indices: [batch_size, output_seq_len, vocab_size]
+        '''
+
+        batch_size = attention.size(0)
+        output_seq_len = attention.size(1)
+        input_seq_len = attention.size(2)
+
+        # print(attention[-1])
+        # att = torch.max(attention[-1], dim=-1)[1]
+        # input_sen = self.vocab.convert_index2sentence(input_indices[-1])
+        # print('注意力 : {}'.format([input_sen[i] for i in att]))
+
+        copy_indices = torch.zeros_like(output_indices)
+        # copy_indices: [batch_size, output_seq_len, vocab_size]
+        input_indices = input_indices.unsqueeze(1).expand(-1, output_seq_len, -1)
+        # input_indices: [batch_size, output_seq_len, input_seq_len]
+
+        copy_indices = copy_indices.scatter_(2, input_indices, attention)
+        # copy_indices: [batch_size, output_seq_len, vocab_size]
+
+        # a = torch.max(copy_indices[-1], dim=-1)[1]
+        # print(self.vocab.convert_index2sentence(a))
+
+        return copy_indices
 
 
 class Encoder_layer(nn.Module):
@@ -270,7 +326,7 @@ class Decoder_layer(nn.Module):
         # FFN结构
         self.feedforward_network = Feedforward_network(self.params)
 
-    def forward(self, output_indices, encoder_hiddens, decoder_self_attention_masks, decoder_mutual_attention_masks):
+    def forward(self, output_indices, encoder_hiddens, decoder_self_attention_masks, decoder_mutual_attention_masks, vocab):
         '''
         输入参数:
         output_indices: [batch_size, output_seq_len, d_model]
@@ -290,17 +346,18 @@ class Decoder_layer(nn.Module):
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过mutual_attention结构
-        output_indices, _ = self.mutual_attention(query=output_indices,
+        output_indices, attention = self.mutual_attention(query=output_indices,
                                                key=encoder_hiddens,
                                                value=encoder_hiddens,
                                                mask=decoder_mutual_attention_masks)
         # output_indices: [batch_size, output_seq_len, d_model]
+        # attention: [batch_size, output_seq_len, input_seq_len]
 
         # 经过FFN结构
         output_indices = self.feedforward_network(output_indices)
         # output_indices: [batch_size, output_seq_len, d_model]
 
-        return output_indices
+        return output_indices, attention
 
 
 class Multihead_attention(nn.Module):
@@ -394,6 +451,11 @@ class Multihead_attention(nn.Module):
         # context_vector: [batch_size, seq_len_query, num_heads * d_v]
         indices = self.linear_o(context_vector)
         # indices: [batch_size, seq_len_query, d_model]
+
+        # 将attention的多头信息合并,便于进行copy机制
+        # attention = torch.sum(attention, dim=1)
+        attention = attention[:, 0, :, :]
+        # attention: [batch_size, seq_len_query, seq_len_key]
 
         # dropout
         indices = self.dropout(indices)

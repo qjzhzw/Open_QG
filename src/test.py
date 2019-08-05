@@ -141,7 +141,7 @@ def one_epoch(params, vocab, loader, model):
         # 为了便于测试,在测试阶段也可以把预测序列打印出来
         if params.print_results:
             logger.info('真实输入序列 : {}'.format(' '.join(vocab.convert_index2sentence(input_indices[-1]))))
-            logger.info('预测输出序列 : {}'.fomat(sentence))
+            logger.info('预测输出序列 : {}'.format(sentence))
 
     return sentences_pred
 

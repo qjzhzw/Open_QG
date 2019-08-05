@@ -38,15 +38,19 @@ def init():
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
-    # 从已保存的pt文件中读取vocab
-    vocab_file = open(params.vocab_file)
+    # 从已保存的vocab文件中读取vocab
+    vocab_file = open(params.vocab_file, 'r')
     vocab = Vocab(params)
+
+    # 逐行导入vocab元素
     for line in vocab_file:
         line = line.split()
         word = line[0]
         index = int(line[1])
+        freq = line[2]
+        embedding = line[3:]
         if not vocab.has_word(word):
-            vocab.add_element(word, index)
+            vocab.add_element(word, index, freq, embedding)
 
     # 定义模型
     model = Model(params, vocab).to(params.device)
