@@ -23,7 +23,7 @@ def params():
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
     parser.add_argument('--main_checkpoint_dir', type=str, default='checkpoint', help='输出的模型参数目录')
     parser.add_argument('--main_output_dir', type=str, default='output', help='输出的预测文件目录')
-    parser.add_argument('--dataset_dir', type=str, default='translation', help='任务所使用的数据集所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='huawei', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--origin_dir', type=str, default='origin', help='原始数据所在子目录')
     parser.add_argument('--train_dir', type=str, default='train', help='训练集数据所在子目录')
     parser.add_argument('--dev_dir', type=str, default='dev', help='验证集数据所在子目录')
@@ -48,12 +48,13 @@ def params():
     parser.add_argument('--print_params', type=bool, default=False, help='是否打印参数列表')
     parser.add_argument('--print_model', type=bool, default=False, help='是否打印出模型结构')
     parser.add_argument('--print_loss', type=bool, default=True, help='是否打印出训练过程中的损失')
-    parser.add_argument('--print_results', type=bool, default=False, help='是否打印出训练过程中的预测序列')
+    parser.add_argument('--print_results', type=bool, default=True, help='是否打印出训练过程中的预测序列')
 
     # 开关相关
     parser.add_argument('--with_answer', type=bool, default=False, help='是否在输入中加入答案信息')
     parser.add_argument('--full_data', type=bool, default=True, help='在没有找到答案信息的情况下是否保留该条数据')
     parser.add_argument('--max_seq_len', type=int, default=50, help='句子最大长度(多余的进行截短)')
+    parser.add_argument('--min_word_count', type=int, default=5, help='在构造vocab时,保留多少词频以上的词')
     parser.add_argument('--load_vocab', type=bool, default=True, help='是否加载预先设定好的vocab')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')

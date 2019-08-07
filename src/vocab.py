@@ -162,15 +162,17 @@ class Vocab():
             indices.append(self.convert_word2index(word))
         return indices
 
-    def convert_index2sentence(self, indices, mode=False):
+    def convert_index2sentence(self, indices, full=False, remove_constants=True):
         '''
         作用:
         将一个句子,从索引序列转换为单词形式
 
         输入参数:
         indices: 输入索引序列
-        mode: True表示输出完整序列
+        full: True表示输出完整序列
               False表示遇到</s>就停止(只输出到</s>前的序列)
+        remove_constants: True表示删除输出序列里的常数
+                          False表示不删除输出序列里的常数
 
         输出参数:
         sentence: 输出单词序列
@@ -184,9 +186,12 @@ class Vocab():
         # 通过遍历的方式,将索引序列转换为单词形式
         sentence = []
         for index in indices:
-            # 在mode为False时,遇到</s>就停止
-            if index == self.convert_word2index('</s>') and mode == False:
+            # 在full为False时,遇到</s>就停止
+            if index == self.convert_word2index('</s>') and full == False:
                 break
+            # 在remove_constants为True时,删除输出的常数(例如<unk>)
+            elif index < len(self.constants) and remove_constants == True:
+                continue
             else:
                 sentence.append(self.convert_index2word(index))
         return sentence

@@ -132,12 +132,12 @@ def load_dataset_translation(params, origin_sentence_file, origin_question_file,
     f_test_question_file = open(test_question_file, 'w')
 
     # 划分训练集/验证集/测试集
-    sentences_train = sentences[ : int(total * 0.007)]
-    questions_train = questions[ : int(total * 0.007)]
-    sentences_dev = sentences[int(total * 0.007) : int(total * 0.008)]
-    questions_dev = questions[int(total * 0.007) : int(total * 0.008)]
-    sentences_test = sentences[int(total * 0.008) : int(total * 0.010)]
-    questions_test = questions[int(total * 0.008) : int(total * 0.010)]
+    sentences_train = sentences[ : int(total * 0.007 * 5)]
+    questions_train = questions[ : int(total * 0.007 * 5)]
+    sentences_dev = sentences[int(total * 0.007 * 5) : int(total * 0.008 * 5)]
+    questions_dev = questions[int(total * 0.007 * 5) : int(total * 0.008 * 5)]
+    sentences_test = sentences[int(total * 0.008 * 5) : int(total * 0.010 * 5)]
+    questions_test = questions[int(total * 0.008 * 5) : int(total * 0.010 * 5)]
 
     # 存入本地文件
     for sentence in sentences_train:
@@ -176,32 +176,33 @@ if __name__ == '__main__':
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
-    # # 加载数据集
-    # load_dataset(params,
-    #              params.origin_train_file,
-    #              params.train_sentence_file,
-    #              params.train_question_file,
-    #              params.train_answer_start_file,
-    #              params.train_answer_end_file),
-    # load_dataset(params,
-    #              params.origin_dev_file,
-    #              params.dev_sentence_file,
-    #              params.dev_question_file,
-    #              params.dev_answer_start_file,
-    #              params.dev_answer_end_file)
-    # load_dataset(params,
-    #              params.origin_test_file,
-    #              params.test_sentence_file,
-    #              params.test_question_file,
-    #              params.test_answer_start_file,
-    #              params.test_answer_end_file)
-
-    load_dataset_translation(params,
-                             params.origin_sentence_file,
-                             params.origin_question_file,
-                             params.train_sentence_file,
-                             params.train_question_file,
-                             params.dev_sentence_file,
-                             params.dev_question_file,
-                             params.test_sentence_file,
-                             params.test_question_file)
+    # 加载数据集
+    if params.dataset_dir == 'translation':
+        load_dataset_translation(params,
+                            params.origin_sentence_file,
+                            params.origin_question_file,
+                            params.train_sentence_file,
+                            params.train_question_file,
+                            params.dev_sentence_file,
+                            params.dev_question_file,
+                            params.test_sentence_file,
+                            params.test_question_file)
+    else:
+        load_dataset(params,
+                    params.origin_train_file,
+                    params.train_sentence_file,
+                    params.train_question_file,
+                    params.train_answer_start_file,
+                    params.train_answer_end_file),
+        load_dataset(params,
+                    params.origin_dev_file,
+                    params.dev_sentence_file,
+                    params.dev_question_file,
+                    params.dev_answer_start_file,
+                    params.dev_answer_end_file)
+        load_dataset(params,
+                    params.origin_test_file,
+                    params.test_sentence_file,
+                    params.test_question_file,
+                    params.test_answer_start_file,
+                    params.test_answer_end_file)

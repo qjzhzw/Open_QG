@@ -37,6 +37,8 @@ def prepare_dataloaders(params, data):
     test_loader: 测试集的dataloader
     '''
 
+    logger.info('正在从{}中读取数据'.format(params.dataset_dir))
+
     # 构造test_loader
     test_dataset = Dataset(data, mode='test')
     test_loader = torch.utils.data.DataLoader(

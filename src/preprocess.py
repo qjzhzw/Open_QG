@@ -101,6 +101,8 @@ def build_vocab(params, vocab_file, sentences):
     vocab: 输出Vocab类,其中包含了数据集中的所有单词
     '''
 
+    logger.info('正在构造vocab')
+
     # 统计词频
     word_freq = {}
     for sentence in sentences:
@@ -127,15 +129,18 @@ def build_vocab(params, vocab_file, sentences):
         word = item[0]
         freq = item[1]
 
-        # 如果单词有预训练的词向量,就将其作为该单词的词向量
-        embedding = None
-        if word in vocab.word2embedding.keys():
-            embedding = vocab.word2embedding[word]
+        # 当词频高于一定阈值,才将该词加入vocab
+        if freq >= params.min_word_count:
 
-        # 如果单词不在vocab中,就添加进去,否则放弃掉
-        if not vocab.has_word(word):
-            vocab.add_element(word, index, freq, embedding)
-            index += 1
+            # 如果单词有预训练的词向量,就将其作为该单词的词向量
+            embedding = None
+            if word in vocab.word2embedding.keys():
+                embedding = vocab.word2embedding[word]
+
+            # 如果单词不在vocab中,就添加进去,否则放弃掉
+            if not vocab.has_word(word):
+                vocab.add_element(word, index, freq, embedding)
+                index += 1
 
     # 将构造的vocab中,每个元素的信息(单词/索引)输出到文件中
     for element in vocab.vocab:
@@ -157,6 +162,8 @@ def load_vocab(params, vocab_file):
     输出参数:
     vocab: 输出Vocab类,其中包含了数据集中的所有单词
     '''
+
+    logger.info('正在加载vocab')
 
     # 从已保存的vocab文件中读取vocab
     vocab_file = open(vocab_file, 'r')

@@ -40,6 +40,8 @@ def prepare_dataloaders(params, data):
     dev_loader: 验证集的dataloader
     '''
 
+    logger.info('正在从{}中读取数据'.format(params.dataset_dir))
+
     # 构造train_loader
     train_dataset = Dataset(data, mode='train')
     train_loader = torch.utils.data.DataLoader(
@@ -186,9 +188,9 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
 
         # 输出预测序列
         for indices in indices_pred:
-            # mode: True表示输出完整序列
+            # full: True表示输出完整序列
             #       False表示遇到</s>就停止(只输出到</s>前的序列)
-            sentence = vocab.convert_index2sentence(indices, mode=False)
+            sentence = vocab.convert_index2sentence(indices, full=False)
             sentences_pred.append(' '.join(sentence))
 
         # 利用预测输出和真实输出计算损失
