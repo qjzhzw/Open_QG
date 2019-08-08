@@ -123,6 +123,9 @@ def build_vocab(params, vocab_file, sentences):
     if vocab.word2embedding:
         logger.info('从{}中成功加载词向量{}'.format(params.embedding_file, len(vocab.word2embedding)))
 
+    # 统计有多少单词被阈值过滤掉了,没有加入vocab
+    dropped_word = 0
+
     # vocab在建立时,就已经包含了一定数量的常数,因此根据数据集添加单词时并不是以0作为起始索引
     index = len(vocab)
     for item in word_freq:
@@ -131,7 +134,6 @@ def build_vocab(params, vocab_file, sentences):
 
         # 当词频高于一定阈值,才将该词加入vocab
         if freq >= params.min_word_count:
-
             # 如果单词有预训练的词向量,就将其作为该单词的词向量
             embedding = None
             if word in vocab.word2embedding.keys():
@@ -141,11 +143,15 @@ def build_vocab(params, vocab_file, sentences):
             if not vocab.has_word(word):
                 vocab.add_element(word, index, freq, embedding)
                 index += 1
+        else:
+            dropped_word += 1
 
     # 将构造的vocab中,每个元素的信息(单词/索引)输出到文件中
     for element in vocab.vocab:
         f_vocab.write('{} {} {} {}\n'.format(element.word, element.index, element.freq, element.embedding))
+
     logger.info('构造的vocab大小为{}'.format(len(vocab)))
+    logger.info('被过滤的单词个数为{}'.format(dropped_word))
 
     return vocab
 
@@ -257,6 +263,7 @@ if __name__ == '__main__':
 
     # 构造数据,输出到临时的pt文件中
     data = {
+        'params' : params,
         'vocab' : vocab,
         'train_input_indices' : train_input_indices,
         'train_output_indices' : train_output_indices,

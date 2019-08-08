@@ -1,7 +1,7 @@
 import sys
 import json
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 from flask import Flask, url_for, redirect, render_template, request
@@ -19,8 +19,8 @@ def interact():
         sentence = data['sentence']
         answer = data['answer']
     else:
-        sentence = 'what'
-        answer = 'what'
+        sentence = 'There are 5000000 people in the united states .'
+        answer = '5000000'
     question = demo(sentence, answer, logger, params, vocab, model, generator)
     ret = json.dumps({'return':question})
     return ret

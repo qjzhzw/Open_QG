@@ -31,6 +31,12 @@ class Model(nn.Module):
         self.encoder = Encoder(self.params, self.vocab)
         self.decoder = Decoder(self.params, self.vocab)
 
+        # encoder和decoder中部分参数共享
+        if self.params.share_embeddings:
+            self.decoder.word_embedding_decoder = self.encoder.word_embedding_encoder
+            self.decoder.position_embedding_decoder = self.encoder.position_embedding_encoder
+            self.decoder.output.weight = self.decoder.word_embedding_decoder.weight
+
     def forward(self, input_indices, output_indices):
         '''
         输入参数:
@@ -97,7 +103,7 @@ class Encoder(nn.Module):
         # encoder_self_attention_masks: [batch_size, input_seq_len, input_seq_len]
 
         # 将索引/位置信息转换为词向量
-        input_indices = self.word_embedding_encoder(input_indices) + \
+        input_indices = self.word_embedding_encoder(input_indices) * np.sqrt(self.params.d_model) + \
                         self.position_embedding_encoder(input_indices)
         # input_indices: [batch_size, input_seq_len, d_model]
 
@@ -180,17 +186,18 @@ class Decoder(nn.Module):
         # decoder_self_attention_masks: [batch_size, output_seq_len, output_seq_len]
 
         # 将索引/位置信息转换为词向量
-        output_indices = self.word_embedding_decoder(output_indices) + \
+        output_indices = self.word_embedding_decoder(output_indices) * np.sqrt(self.params.d_model) + \
                          self.position_embedding_decoder(output_indices)
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for decoder_layer in self.decoder_layers:
-            output_indices, attention = decoder_layer(output_indices,
-                                                      encoder_hiddens,
-                                                      decoder_self_attention_masks,
-                                                      decoder_mutual_attention_masks,
-                                                      self.vocab)
+            output_indices, attention, context_vector = \
+                decoder_layer(output_indices,
+                              encoder_hiddens,
+                              decoder_self_attention_masks,
+                              decoder_mutual_attention_masks,
+                              self.vocab)
         # output_indices: [batch_size, output_seq_len, d_model]
         # attention: [batch_size, output_seq_len, input_seq_len]
 
@@ -291,10 +298,10 @@ class Encoder_layer(nn.Module):
         '''
 
         # 经过self_attention结构
-        input_indices, _ = self.self_attention(query=input_indices,
-                                            key=input_indices,
-                                            value=input_indices,
-                                            mask=encoder_self_attention_masks)
+        input_indices, _, _ = self.self_attention(query=input_indices,
+                                                  key=input_indices,
+                                                  value=input_indices,
+                                                  mask=encoder_self_attention_masks)
         # input_indices: [batch_size, input_seq_len, d_model]
 
         # 经过FFN结构
@@ -333,23 +340,25 @@ class Decoder_layer(nn.Module):
         encoder_hiddens: [batch_size, input_seq_len, d_model]
         decoder_self_attention_masks: [batch_size, output_seq_len, output_seq_len]
         decoder_mutual_attention_masks: [batch_size, output_seq_len, input_seq_len]
+        vocab: Vocab类
 
         输出参数:
         output_indices: [batch_size, output_seq_len, d_model]
         '''
 
         # 经过self_attention结构
-        output_indices, _ = self.self_attention(query=output_indices,
-                                             key=output_indices,
-                                             value=output_indices,
-                                             mask=decoder_self_attention_masks)
+        output_indices, _, _ = self.self_attention(query=output_indices,
+                                                   key=output_indices,
+                                                   value=output_indices,
+                                                   mask=decoder_self_attention_masks)
         # output_indices: [batch_size, output_seq_len, d_model]
 
         # 经过mutual_attention结构
-        output_indices, attention = self.mutual_attention(query=output_indices,
-                                               key=encoder_hiddens,
-                                               value=encoder_hiddens,
-                                               mask=decoder_mutual_attention_masks)
+        output_indices, attention, context_vector = \
+            self.mutual_attention(query=output_indices,
+                                  key=encoder_hiddens,
+                                  value=encoder_hiddens,
+                                  mask=decoder_mutual_attention_masks)
         # output_indices: [batch_size, output_seq_len, d_model]
         # attention: [batch_size, output_seq_len, input_seq_len]
 
@@ -357,7 +366,7 @@ class Decoder_layer(nn.Module):
         output_indices = self.feedforward_network(output_indices)
         # output_indices: [batch_size, output_seq_len, d_model]
 
-        return output_indices, attention
+        return output_indices, attention, context_vector
 
 
 class Multihead_attention(nn.Module):
@@ -465,7 +474,7 @@ class Multihead_attention(nn.Module):
         indices = self.layer_norm(indices)
         # indices: [batch_size, seq_len_query, d_model]
 
-        return indices, attention
+        return indices, attention, context_vector
 
 
 class Feedforward_network(nn.Module):

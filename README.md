@@ -20,8 +20,11 @@
 5: 模型评估  
 6: 测试demo  
 
-可以同时指定多个运行模式,例如希望顺序执行"训练"和"测试"阶段,则命令为:  
+可以同时指定多个运行模式,例如希望顺序执行 "3: 模型训练" 和 "4: 模型测试" 阶段,则命令为:  
 `./pipeline.sh 23 [指定GPU]`  
+
+其中 "2: 数据预处理" 会得到一个pt文件,其中包含了所有参数集合
+之后的 "3: 模型训练" / "4: 模型测试" / "6: 测试demo" 均是从该pt文件中读取参数集合
 
 ### 指定GPU：
 使用第几块GPU，若当前无可用GPU会自动转换为CPU模式  
@@ -49,6 +52,7 @@ preprocess.py : 数据预处理
 train.py : 模型训练+验证  
 test.py : 模型测试  
 demo.py : demo测试  
+app.py : 开启后端服务器(flask框架)  
 vocab.py : Vocab类(构造任务所使用词表)  
 dataset.py : Dataset类(将数据构造成batch形式)  
 model.py : Model类(Transformer模型)  
@@ -63,12 +67,12 @@ requirements.txt : 需要安装的依赖包及对应版本
 
 
 ## 实验结果:
-BLEU-1: 27.28  
-BLEU-2: 11.35  
-BLEU-3: 6.01  
-BLEU-4: 3.53  
-METEOR: 8.36  
-ROUGH-L: 26.84  
+BLEU-1: 29.43  
+BLEU-2: 13.16  
+BLEU-3: 7.25  
+BLEU-4: 4.24  
+METEOR: 9.89  
+ROUGH-L: 29.44  
 
 
 ## 测试demo:

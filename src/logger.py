@@ -11,8 +11,9 @@ import logging
 
 def logger():
     '''
-    return logger: 日志信息的输出器
-                   用法: logger.info(XXX)
+    输出参数:
+    logger: 日志信息的输出器
+            用法: logger.info(XXX)
     '''
 
     # logger的一些设置

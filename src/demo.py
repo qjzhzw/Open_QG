@@ -34,6 +34,12 @@ def init():
     logger = logger()
     params = params()
 
+    # 从已保存的pt文件中读取数据
+    # 包括:vocab,训练集/验证集各自的输入/输出索引序列
+    data = torch.load(params.temp_pt_file)
+    vocab = data['vocab']
+    params = data['params']
+
     # 打印参数列表
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
@@ -42,16 +48,6 @@ def init():
     vocab_file = open(params.vocab_file, 'r')
     vocab = Vocab(params)
 
-    # 逐行导入vocab元素
-    for line in vocab_file:
-        line = line.split()
-        word = line[0]
-        index = int(line[1])
-        freq = line[2]
-        embedding = line[3:]
-        if not vocab.has_word(word):
-            vocab.add_element(word, index, freq, embedding)
-
     # 定义模型
     model = Model(params, vocab).to(params.device)
 
@@ -59,12 +55,13 @@ def init():
     if params.print_model:
         logger.info(model)
 
-    # 断言: 模型参数文件存在
-    assert os.path.exists(params.checkpoint_file)
     # 加载模型参数
-    model_params = torch.load(params.checkpoint_file, map_location=params.device)
-    model.load_state_dict(model_params)
-    logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    if os.path.exists(params.checkpoint_file):
+        model_params = torch.load(params.checkpoint_file, map_location=params.device)
+        model.load_state_dict(model_params)
+        logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    else:
+        logger.info('注意!!!没有训练好的模型参数,正在使用随机初始化模型参数进行测试')
 
     model.eval()
 

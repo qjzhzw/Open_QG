@@ -73,12 +73,13 @@ def test_model(params, vocab, test_loader):
     if params.print_model:
         logger.info(model)
 
-    # 断言: 模型参数文件存在
-    assert os.path.exists(params.checkpoint_file)
     # 加载模型参数
-    model_params = torch.load(params.checkpoint_file, map_location=params.device)
-    model.load_state_dict(model_params)
-    logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    if os.path.exists(params.checkpoint_file):
+        model_params = torch.load(params.checkpoint_file, map_location=params.device)
+        model.load_state_dict(model_params)
+        logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    else:
+        logger.info('注意!!!没有训练好的模型参数,正在使用随机初始化模型参数进行测试')
 
     # 一轮模型测试
     sentences_pred = one_epoch(params, vocab, test_loader, model)
@@ -100,7 +101,7 @@ def test_model(params, vocab, test_loader):
     os.system('evaluate/multi-bleu.perl %s < %s' %(params.gold_file, params.pred_file))
 
 
-def one_epoch(params, vocab, loader, model):
+def one_epoch(params, vocab, loader, model):xwxw
     '''
     作用:
     每一轮的测试
@@ -142,7 +143,10 @@ def one_epoch(params, vocab, loader, model):
 
         # 为了便于测试,在测试阶段也可以把预测序列打印出来
         if params.print_results:
-            logger.info('真实输入序列 : {}'.format(' '.join(vocab.convert_index2sentence(input_indices[-1]))))
+            input_gold = ' '.join(vocab.convert_index2sentence(input_indices[-1]))
+            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
+            output_pred = sentences_pred[-1]
+            logger.info('真实输入序列 : {}'.format())
             logger.info('预测输出序列 : {}'.format(sentence))
 
     return sentences_pred
@@ -153,16 +157,19 @@ if __name__ == '__main__':
     # 加载日志输出器和参数集合
     logger = logger()
     params = params()
-    params.max_seq_len = 30
-
-    # 打印参数列表
-    if params.print_params:
-        logger.info('参数列表:{}'.format(params))
 
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列
     data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
+    params = data['params']
+
+    params.load_model = True
+    params.max_seq_len = 30
+
+    # 打印参数列表
+    if params.print_params:
+        logger.info('参数列表:{}'.format(params))
 
     # 根据加载数据构造batch(使用pytorch中的datasets类)
     test_loader = prepare_dataloaders(params, data)

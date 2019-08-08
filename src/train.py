@@ -257,8 +257,11 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
 
         # 为了便于测试,在训练/验证阶段也可以把预测序列打印出来
         if params.print_results:
-            logger.info('真实输入序列 : {}'.format(' '.join(vocab.convert_index2sentence(input_indices[-1]))))
-            logger.info('真实输出序列 : {}'.format(' '.join(vocab.convert_index2sentence(output_indices[-1]))))
+            input_gold = ' '.join(vocab.convert_index2sentence(input_indices[-1]))
+            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
+            output_pred = sentences_pred[-1]
+            logger.info('真实输入序列 : {}'.format(input_gold))
+            logger.info('真实输出序列 : {}'.format(output_gold))
             logger.info('预测输出序列 : {}'.format(sentence))
 
     # 计算总损失
@@ -273,14 +276,15 @@ if __name__ == '__main__':
     logger = logger()
     params = params()
 
-    # 打印参数列表
-    if params.print_params:
-        logger.info('参数列表:{}'.format(params))
-
     # 从已保存的pt文件中读取数据
     # 包括:vocab,训练集/验证集各自的输入/输出索引序列
     data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
+    params = data['params']
+
+    # 打印参数列表
+    if params.print_params:
+        logger.info('参数列表:{}'.format(params))
 
     # 根据加载数据构造batch(使用pytorch中的datasets类)
     train_loader, dev_loader = prepare_dataloaders(params, data)
