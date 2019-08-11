@@ -24,7 +24,7 @@ def params():
     parser.add_argument('--main_data_dir', type=str, default='data', help='数据主目录')
     parser.add_argument('--main_checkpoint_dir', type=str, default='checkpoint', help='输出的模型参数目录')
     parser.add_argument('--main_output_dir', type=str, default='output', help='输出的预测文件目录')
-    parser.add_argument('--dataset_dir', type=str, default='crosslingual/ZH2EN', help='任务所使用的数据集所在的子目录')
+    parser.add_argument('--dataset_dir', type=str, default='squad', help='任务所使用的数据集所在的子目录')
     parser.add_argument('--origin_dir', type=str, default='origin', help='原始数据所在子目录')
     parser.add_argument('--train_dir', type=str, default='train', help='训练集数据所在子目录')
     parser.add_argument('--dev_dir', type=str, default='dev', help='验证集数据所在子目录')
@@ -60,7 +60,8 @@ def params():
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
-    parser.add_argument('--with_copy', type=bool, default=False, help='是否使用copy机制')
+    parser.add_argument('--answer_embeddings', type=bool, default=True, help='是否对在模型中答案进行编码')
+    parser.add_argument('--with_copy', type=bool, default=True, help='是否使用copy机制')
 
     # 训练器超参数相关
     parser.add_argument('--num_epochs', type=int, default=1, help='模型超参数:num_epochs(模型训练/验证中设置)')

@@ -93,6 +93,8 @@ def train_model(params, vocab, train_loader, dev_loader):
         model_params = torch.load(params.checkpoint_file, map_location=params.device)
         model.load_state_dict(model_params)
         logger.info('正在从{}中读取已经训练好的模型参数'.format(params.checkpoint_file))
+    else:
+        logger.info('没有训练好的模型参数,从头开始训练')
 
     # 定义优化器
     optimizer = Optimizer(params, model)
@@ -194,6 +196,9 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
             sentences_pred.append(' '.join(sentence))
 
         # 利用预测输出和真实输出计算损失
+        # softmax在模型中已经做了,因此还需要自己做一下log
+        # output_indices_pred = F.log_softmax(output_indices_pred, dim=-1)
+        output_indices_pred = torch.log(output_indices_pred)
         # output_indices_pred: [batch_size, output_seq_len, vocab_size]
         # output_indices_gold: [batch_size, output_seq_len]
         if params.label_smoothing:
@@ -205,13 +210,7 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
 
             # 调整维度
             output_indices_pred = output_indices_pred.contiguous().view(batch_size * output_seq_len, vocab_size)
-            output_indices_gold = output_indices_gold.contiguous().view(batch_size * output_seq_len)
-            # output_indices_pred: [batch_size * output_seq_len, vocab_size]
-            # output_indices_gold: [batch_size * output_seq_len]
-
-            # 对预测值求softmax,调整维度
-            output_indices_pred = F.log_softmax(output_indices_pred, dim=-1)
-            output_indices_gold = output_indices_gold.unsqueeze(1)
+            output_indices_gold = output_indices_gold.contiguous().view(batch_size * output_seq_len).unsqueeze(1)
             # output_indices_pred: [batch_size * output_seq_len, vocab_size]
             # output_indices_gold: [batch_size * output_seq_len, 1]
 
@@ -233,7 +232,7 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
             # NLLLoss(x,y)的两个参数:
             # x: [batch_size, num_classes, ……], 类型为LongTensor, 是预测输出
             # y: [batch_size, ……], 类型为LongTensor, 是真实输出
-            criterion = torch.nn.CrossEntropyLoss(ignore_index=vocab.word2index['<pad>'])
+            criterion = torch.nn.NLLLoss(ignore_index=vocab.word2index['<pad>'])
 
             output_indices_pred = output_indices_pred.permute(0, 2, 1)
             # output_indices_pred: [batch_size, vocab_size, output_seq_len]
@@ -262,7 +261,7 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
             output_pred = sentences_pred[-1]
             logger.info('真实输入序列 : {}'.format(input_gold))
             logger.info('真实输出序列 : {}'.format(output_gold))
-            logger.info('预测输出序列 : {}'.format(sentence))
+            logger.info('预测输出序列 : {}'.format(output_pred))
 
     # 计算总损失
     total_loss = total_loss / total_examples
@@ -281,6 +280,11 @@ if __name__ == '__main__':
     data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
     params = data['params']
+
+    # params.num_epochs = 5
+    # params.print_loss = True
+    # params.with_copy = True
+    # params.share_embeddings = True
 
     # 打印参数列表
     if params.print_params:

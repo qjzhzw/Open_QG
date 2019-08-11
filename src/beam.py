@@ -17,9 +17,7 @@ class Generator(object):
 
     def __init__(self, params, model):
         self.params = params
-        self.model = model
-
-        model.word_prob_prj = nn.LogSoftmax(dim=1)        
+        self.model = model    
 
     def generate_batch(self, src_seq):
         ''' Translation work in one batch '''

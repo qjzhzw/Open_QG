@@ -158,7 +158,6 @@ class Decoder(nn.Module):
 
         # copy机制所用的门控
         self.copy_gate = nn.Linear(self.params.d_model, 1)
-        self.copy_sigmoid = nn.Sigmoid()
 
         # 测试所使用GRU
         self.GRU_decoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
@@ -203,12 +202,18 @@ class Decoder(nn.Module):
 
         if self.params.with_copy:
             copy_gate = self.copy_gate(output_indices)
-            copy_gate = self.copy_sigmoid(copy_gate)
+            copy_gate = torch.sigmoid(copy_gate)
             # copy_gate: [batch_size, output_seq_len, 1]
+            # print(copy_gate[-1].squeeze())
 
         # 经过输出层,将隐向量转换为模型最终输出:基于vocab的概率分布
         output_indices = self.output(output_indices)
         # output_indices: [batch_size, output_seq_len, vocab_size]
+
+        # 使用softmax将模型输出转换为概率分布
+        output_indices = F.softmax(output_indices, dim=-1)
+        # # 将softmax后的结果控制在一定范围内,避免在计算log时出现log(0)的情况
+        # output_indices = torch.clamp(output_indices, 1e-30, 1)
 
         if self.params.with_copy:
             # copy机制
@@ -216,7 +221,6 @@ class Decoder(nn.Module):
             # copy_indices: [batch_size, output_seq_len, vocab_size]
 
             output_indices = copy_gate * copy_indices + (1 - copy_gate) * output_indices
-            # print(copy_gate[-1].squeeze())
             # output_indices: [batch_size, output_seq_len, vocab_size]
 
         # # 测试所使用GRU
@@ -387,8 +391,9 @@ class Multihead_attention(nn.Module):
         self.linear_key = nn.Linear(self.params.d_model, self.params.d_k * self.params.num_heads)
         self.linear_value = nn.Linear(self.params.d_model, self.params.d_v * self.params.num_heads)
 
-        # 计算attention时所使用的softmax
-        self.softmax_attention = nn.Softmax(dim=-1)
+        # nn.init.normal_(self.linear_query.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_k)))
+        # nn.init.normal_(self.linear_key.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_k)))
+        # nn.init.normal_(self.linear_value.weight, mean=0, std=np.sqrt(2.0 / (self.params.d_model + self.params.d_v)))
 
         # 将多头信息合并后通过线性变换
         self.linear_o = nn.Linear(self.params.num_heads * self.params.d_v, self.params.d_model)
@@ -450,7 +455,7 @@ class Multihead_attention(nn.Module):
         # scaled_attention_score: [batch_size, num_heads, seq_len_query, seq_len_key]
 
         # 通过softmax归一化后得到最终的attention分数,权重加和后得到context_vector向量
-        attention = self.softmax_attention(scaled_attention_score)
+        attention = F.softmax(scaled_attention_score, dim=-1)
         # attention: [batch_size, num_heads, seq_len_query, seq_len_key]
         context_vector = torch.matmul(attention, value)
         # context_vetor: [batch_size, num_heads, seq_len_query, d_v]
@@ -462,8 +467,7 @@ class Multihead_attention(nn.Module):
         # indices: [batch_size, seq_len_query, d_model]
 
         # 将attention的多头信息合并,便于进行copy机制
-        # attention = torch.sum(attention, dim=1)
-        attention = attention[:, 0, :, :]
+        attention = torch.mean(attention, dim=1)
         # attention: [batch_size, seq_len_query, seq_len_key]
 
         # dropout

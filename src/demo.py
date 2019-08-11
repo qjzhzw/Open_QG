@@ -44,10 +44,6 @@ def init():
     if params.print_params:
         logger.info('参数列表:{}'.format(params))
 
-    # 从已保存的vocab文件中读取vocab
-    vocab_file = open(params.vocab_file, 'r')
-    vocab = Vocab(params)
-
     # 定义模型
     model = Model(params, vocab).to(params.device)
 

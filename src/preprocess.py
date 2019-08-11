@@ -229,7 +229,7 @@ if __name__ == '__main__':
     dev_output_sentences = load_dataset(params, params.dev_question_file)
     test_input_sentences = load_dataset(params, params.test_sentence_file)
     test_output_sentences = load_dataset(params, params.test_question_file)
-    if params.with_answer:
+    if params.answer_embeddings:
         train_answers = load_answer(params.train_answer_start_file, params.train_answer_end_file)
         dev_answers = load_answer(params.dev_answer_start_file, params.dev_answer_end_file)
         test_answers = load_answer(params.test_answer_start_file, params.test_answer_end_file)
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     assert len(train_input_sentences) == len(train_output_sentences) 
     assert len(dev_input_sentences) == len(dev_output_sentences)
     assert len(test_input_sentences) == len(test_output_sentences)
-    if params.with_answer:
+    if params.answer_embeddings:
         assert len(train_input_sentences) == len(train_answers)
         assert len(dev_input_sentences) == len(dev_answers)
         assert len(test_input_sentences) == len(test_answers)
@@ -261,6 +261,8 @@ if __name__ == '__main__':
     test_input_indices = convert_sentence2index(test_input_sentences, vocab)
     test_output_indices = convert_sentence2index(test_output_sentences, vocab)
 
+    logger.info('正在将数据中的单词转换为索引')
+
     # 构造数据,输出到临时的pt文件中
     data = {
         'params' : params,
@@ -273,3 +275,5 @@ if __name__ == '__main__':
         'test_output_indices' : test_output_indices,
     }
     torch.save(data, params.temp_pt_file)
+
+    logger.info('构造数据输出已经保存至{}'.format(params.temp_pt_file))

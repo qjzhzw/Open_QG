@@ -101,7 +101,7 @@ def test_model(params, vocab, test_loader):
     os.system('evaluate/multi-bleu.perl %s < %s' %(params.gold_file, params.pred_file))
 
 
-def one_epoch(params, vocab, loader, model):xwxw
+def one_epoch(params, vocab, loader, model):
     '''
     作用:
     每一轮的测试
@@ -146,8 +146,9 @@ def one_epoch(params, vocab, loader, model):xwxw
             input_gold = ' '.join(vocab.convert_index2sentence(input_indices[-1]))
             output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
             output_pred = sentences_pred[-1]
-            logger.info('真实输入序列 : {}'.format())
-            logger.info('预测输出序列 : {}'.format(sentence))
+            logger.info('真实输入序列 : {}'.format(input_gold))
+            logger.info('真实输出序列 : {}'.format(output_gold))
+            logger.info('预测输出序列 : {}'.format(output_pred))
 
     return sentences_pred
 
@@ -164,8 +165,7 @@ if __name__ == '__main__':
     vocab = data['vocab']
     params = data['params']
 
-    params.load_model = True
-    params.max_seq_len = 30
+    params.max_seq_len = 20
 
     # 打印参数列表
     if params.print_params:
