@@ -22,7 +22,6 @@ from logger import logger
 from params import params
 from vocab import Vocab
 from dataset import Dataset, collate_fn
-from model import Model
 from optimizer import Optimizer
 
 
@@ -43,7 +42,7 @@ def prepare_dataloaders(params, data):
     logger.info('正在从{}中读取数据'.format(params.dataset_dir))
 
     # 构造train_loader
-    train_dataset = Dataset(data, mode='train')
+    train_dataset = Dataset(params, data, mode='train')
     train_loader = torch.utils.data.DataLoader(
         dataset = train_dataset,
         num_workers = params.num_workers,
@@ -54,7 +53,7 @@ def prepare_dataloaders(params, data):
     logger.info('正在构造train_loader,共有{}个batch'.format(len(train_dataset)))
 
     # 构造dev_loader
-    dev_dataset = Dataset(data, mode='dev')
+    dev_dataset = Dataset(params, data, mode='dev')
     dev_loader = torch.utils.data.DataLoader(
         dataset = dev_dataset,
         num_workers = params.num_workers,
@@ -164,8 +163,13 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
         # 从数据中读取模型的输入和输出
         input_indices = batch[0].to(params.device)
         output_indices = batch[1].to(params.device)
+        if torch.is_tensor(batch[2]):
+            answer_indices = batch[2].to(params.device)
+        else:
+            answer_indices = None
         # input_indices: [batch_size, input_seq_len]
         # output_indices: [batch_size, output_seq_len]
+        # answer_indices: [batch_size, output_seq_len]
 
         # 模型:通过模型输入来预测真实输出,即
         #  <s>  1   2   3
@@ -181,7 +185,7 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
         output_indices = output_indices[:, :-1]
 
         # 将输入数据导入模型,得到预测的输出数据
-        output_indices_pred = model(input_indices, output_indices)
+        output_indices_pred = model(input_indices, output_indices, answer_indices=answer_indices)
         # output_indices_pred: [batch_size, output_seq_len, vocab_size]
 
         # 将基于vocab的概率分布,通过取最大值的方式得到预测的输出序列
@@ -257,10 +261,17 @@ def one_epoch(params, vocab, loader, model, optimizer, epoch, mode='train'):
         # 为了便于测试,在训练/验证阶段也可以把预测序列打印出来
         if params.print_results:
             input_gold = ' '.join(vocab.convert_index2sentence(input_indices[-1]))
-            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
-            output_pred = sentences_pred[-1]
             logger.info('真实输入序列 : {}'.format(input_gold))
+
+            if torch.is_tensor(answer_indices):
+                answer = answer_indices[-1] * input_indices[-1]
+                answer = ' '.join(vocab.convert_index2sentence(answer, full=True))
+                logger.info('真实答案序列 : {}'.format(answer))
+
+            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
             logger.info('真实输出序列 : {}'.format(output_gold))
+
+            output_pred = sentences_pred[-1]
             logger.info('预测输出序列 : {}'.format(output_pred))
 
     # 计算总损失
@@ -285,6 +296,11 @@ if __name__ == '__main__':
     # params.print_loss = True
     # params.with_copy = True
     # params.share_embeddings = True
+
+    if params.rnnsearch:
+        from rnnsearch import Model
+    else:
+        from transformer import Model
 
     # 打印参数列表
     if params.print_params:

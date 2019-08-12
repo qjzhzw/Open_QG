@@ -52,11 +52,12 @@ def params():
     parser.add_argument('--print_results', type=bool, default=False, help='是否打印出训练过程中的预测序列')
 
     # 开关相关
+    parser.add_argument('--rnnsearch', type=bool, default=False, help='是否使用RNNSearch模型,否则使用Transformer模型')
     parser.add_argument('--with_answer', type=bool, default=False, help='是否在输入中加入答案信息')
     parser.add_argument('--full_data', type=bool, default=True, help='在没有找到答案信息的情况下是否保留该条数据')
     parser.add_argument('--max_seq_len', type=int, default=50, help='句子最大长度(多余的进行截短)')
-    parser.add_argument('--min_word_count', type=int, default=0, help='在构造vocab时,保留多少词频以上的词')
-    parser.add_argument('--load_vocab', type=bool, default=False, help='是否加载预先设定好的vocab')
+    parser.add_argument('--min_word_count', type=int, default=5, help='在构造vocab时,保留多少词频以上的词')
+    parser.add_argument('--load_vocab', type=bool, default=True, help='是否加载预先设定好的vocab')
     parser.add_argument('--cuda', type=bool, default=True, help='是否使用cuda')
     parser.add_argument('--load_model', type=bool, default=True, help='是否加载训练好的模型参数')
     parser.add_argument('--label_smoothing', type=bool, default=True, help='是否使用标签平滑归一化')
@@ -75,7 +76,7 @@ def params():
     # 模型超参数相关
     parser.add_argument('--load_embeddings', type=bool, default=False, help='是否加载预训练的词向量')
     parser.add_argument('--train_embeddings', type=bool, default=False, help='是否在训练过程中改变预训练的词向量')
-    parser.add_argument('--share_embeddings', type=bool, default=True, help='是否在encoder和decoder中使用共享的embedding层')
+    parser.add_argument('--share_embeddings', type=bool, default=False, help='是否在encoder和decoder中使用共享的embedding层')
     parser.add_argument('--num_layers', type=int, default=3, help='transformer模型超参数:num_layers')
     parser.add_argument('--num_heads', type=int, default=3, help='transformer模型超参数:num_heads')
     parser.add_argument('--d_model', type=int, default=300, help='transformer模型超参数:d_model')

@@ -37,17 +37,18 @@ class Model(nn.Module):
             self.decoder.position_embedding_decoder = self.encoder.position_embedding_encoder
             self.decoder.output.weight = self.decoder.word_embedding_decoder.weight
 
-    def forward(self, input_indices, output_indices):
+    def forward(self, input_indices, output_indices, answer_indices=None):
         '''
         输入参数:
         input_indices: [batch_size, input_seq_len]
         output_indices: [batch_size, output_seq_len]
+        answer_indices: [batch_size, input_seq_len]
 
         输出参数:
         output_indices: [batch_size, output_seq_len, vocab_size]
         '''
 
-        encoder_hiddens = self.encoder(input_indices)
+        encoder_hiddens = self.encoder(input_indices, answer_indices)
         output_indices = self.decoder(output_indices, input_indices, encoder_hiddens)
 
         return output_indices
@@ -75,6 +76,7 @@ class Encoder(nn.Module):
         # embedding层,将索引/位置信息转换为词向量
         self.word_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
         self.position_embedding_encoder = nn.Embedding(self.vocab_size, self.params.d_model)
+        self.answer_embedding_encoder = nn.Embedding(2, self.params.d_model)
 
         # 如果有预训练的词向量,则使用预训练的词向量进行权重初始化
         if self.params.load_embeddings:
@@ -84,13 +86,11 @@ class Encoder(nn.Module):
         # 多个相同子结构组成的encoder子层,层数为num_layers
         self.encoder_layers = nn.ModuleList([Encoder_layer(self.params) for _ in range(self.params.num_layers)])
 
-        # 测试所使用GRU
-        self.GRU_encoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
-
-    def forward(self, input_indices):
+    def forward(self, input_indices, answer_indices=None):
         '''
         输入参数:
         input_indices: [batch_size, input_seq_len]
+        answer_indices: [batch_size, input_seq_len]
 
         输出参数:
         input_indices: [batch_size, input_seq_len]
@@ -107,17 +107,15 @@ class Encoder(nn.Module):
                         self.position_embedding_encoder(input_indices)
         # input_indices: [batch_size, input_seq_len, d_model]
 
+        # 如果有答案信息,就转换为词向量
+        if torch.is_tensor(answer_indices):
+            input_indices += self.answer_embedding_encoder(answer_indices)
+
         # 经过多个相同子结构组成的decoder子层,层数为num_layers
         for encoder_layer in self.encoder_layers:
             input_indices = encoder_layer(input_indices,
                                           encoder_self_attention_masks)
         # input_indices: [batch_size, input_seq_len, d_model]
-
-        # # 测试所使用GRU
-        # input_indices = self.word_embedding_encoder(input_indices)
-        # # input_indices: [batch_size, input_seq_len, d_model]
-        # input_indices, _ = self.GRU_encoder(input_indices)
-        # # input_indices: [batch_size, input_seq_len, d_model]
 
         return input_indices
 
@@ -159,9 +157,6 @@ class Decoder(nn.Module):
         # copy机制所用的门控
         self.copy_gate = nn.Linear(self.params.d_model, 1)
 
-        # 测试所使用GRU
-        self.GRU_decoder = nn.GRU(self.params.d_model, self.params.d_model, batch_first=True, num_layers=1)
-
     def forward(self, output_indices, input_indices, encoder_hiddens):
         '''
         输入参数:
@@ -172,8 +167,6 @@ class Decoder(nn.Module):
         输出参数:
         output_indices: [batch_size, output_seq_len, vocab_size]
         '''
-        # print('输出句子 : {}'.format(self.vocab.convert_index2sentence(output_indices[-1])))
-        # print('输入句子 : {}'.format(self.vocab.convert_index2sentence(input_indices[-1])))
 
         # 构造掩膜和位置信息
         output_indices_positions = self.utils.build_positions(output_indices)
@@ -222,16 +215,6 @@ class Decoder(nn.Module):
 
             output_indices = copy_gate * copy_indices + (1 - copy_gate) * output_indices
             # output_indices: [batch_size, output_seq_len, vocab_size]
-
-        # # 测试所使用GRU
-        # output_indices = self.word_embedding_decoder(output_indices)
-        # # output_indices: [batch_size, output_seq_len, d_model]
-        # encoder_hiddens = encoder_hiddens[:, 0, :].unsqueeze(0).contiguous()
-        # # encoder_hiddens: [1, batch_size, d_model]
-        # output_indices, _ = self.GRU_decoder(output_indices, encoder_hiddens)
-        # # output_indices: [batch_size, output_seq_len, d_model]
-        # output_indices = self.output(output_indices)
-        # # output_indices: [batch_size, output_seq_len, vocab_size]
 
         return output_indices
 

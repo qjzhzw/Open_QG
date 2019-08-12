@@ -20,7 +20,6 @@ from logger import logger
 from params import params
 from vocab import Vocab
 from dataset import Dataset, collate_fn
-from model import Model
 from beam import Generator
 
 
@@ -40,7 +39,7 @@ def prepare_dataloaders(params, data):
     logger.info('正在从{}中读取数据'.format(params.dataset_dir))
 
     # 构造test_loader
-    test_dataset = Dataset(data, mode='test')
+    test_dataset = Dataset(params, data, mode='test')
     test_loader = torch.utils.data.DataLoader(
         dataset = test_dataset,
         num_workers = params.num_workers,
@@ -127,12 +126,17 @@ def one_epoch(params, vocab, loader, model):
         # 从数据中读取模型的输入和输出
         input_indices = batch[0].to(params.device)
         output_indices = batch[1].to(params.device)
+        if torch.is_tensor(batch[2]):
+            answer_indices = batch[2].to(params.device)
+        else:
+            answer_indices = None
         # input_indices: [batch_size, input_seq_len]
         # output_indices: [batch_size, output_seq_len]
+        # answer_indices: [batch_size, output_seq_len]
 
         # 使用beam_search算法,以<s>作为开始符得到完整的预测序列
         generator = Generator(params, model)
-        indices_pred, scores_pred = generator.generate_batch(input_indices)
+        indices_pred, scores_pred = generator.generate_batch(input_indices, src_ans=answer_indices)
         # indices_pred: [batch_size, beam_size, output_seq_len]
 
         # 输出预测序列
@@ -144,10 +148,17 @@ def one_epoch(params, vocab, loader, model):
         # 为了便于测试,在测试阶段也可以把预测序列打印出来
         if params.print_results:
             input_gold = ' '.join(vocab.convert_index2sentence(input_indices[-1]))
-            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
-            output_pred = sentences_pred[-1]
             logger.info('真实输入序列 : {}'.format(input_gold))
+
+            if torch.is_tensor(answer_indices):
+                answer = answer_indices[-1] * input_indices[-1]
+                answer = ' '.join(vocab.convert_index2sentence(answer, full=True))
+                logger.info('真实答案序列 : {}'.format(answer))
+
+            output_gold = ' '.join(vocab.convert_index2sentence(output_indices[-1]))
             logger.info('真实输出序列 : {}'.format(output_gold))
+
+            output_pred = sentences_pred[-1]
             logger.info('预测输出序列 : {}'.format(output_pred))
 
     return sentences_pred
@@ -165,7 +176,10 @@ if __name__ == '__main__':
     vocab = data['vocab']
     params = data['params']
 
-    params.max_seq_len = 20
+    if params.rnnsearch:
+        from rnnsearch import Model
+    else:
+        from transformer import Model
 
     # 打印参数列表
     if params.print_params:

@@ -229,6 +229,7 @@ if __name__ == '__main__':
     dev_output_sentences = load_dataset(params, params.dev_question_file)
     test_input_sentences = load_dataset(params, params.test_sentence_file)
     test_output_sentences = load_dataset(params, params.test_question_file)
+    train_answers = dev_answers = test_answers = None
     if params.answer_embeddings:
         train_answers = load_answer(params.train_answer_start_file, params.train_answer_end_file)
         dev_answers = load_answer(params.dev_answer_start_file, params.dev_answer_end_file)
@@ -269,10 +270,13 @@ if __name__ == '__main__':
         'vocab' : vocab,
         'train_input_indices' : train_input_indices,
         'train_output_indices' : train_output_indices,
+        'train_answers' : train_answers,
         'dev_input_indices' : dev_input_indices,
         'dev_output_indices' : dev_output_indices,
+        'dev_answers' : dev_answers,
         'test_input_indices' : test_input_indices,
         'test_output_indices' : test_output_indices,
+        'test_answers' : test_answers,
     }
     torch.save(data, params.temp_pt_file)
 

@@ -27,7 +27,6 @@ def init():
     from logger import logger
     from params import params
     from vocab import Vocab
-    from model import Model
     from beam import Generator
 
     # 加载日志输出器和参数集合
@@ -39,6 +38,11 @@ def init():
     data = torch.load(params.temp_pt_file)
     vocab = data['vocab']
     params = data['params']
+
+    if params.rnnsearch:
+        from rnnsearch import Model
+    else:
+        from transformer import Model
 
     # 打印参数列表
     if params.print_params:
@@ -105,7 +109,7 @@ def demo(input_sentence, input_answer, logger, params, vocab, model, generator):
     # input_indices: [1(batch_size), input_seq_len]
 
     # 使用beam_search算法,以<s>作为开始符得到完整的预测序列
-    indices_pred, scores_pred = generator.generate_batch(input_indices)
+    indices_pred, scores_pred = generator.generate_batch(input_indices, src_ans=None)
     # indices_pred: [batch_size, beam_size, output_seq_len]
     output_indices = indices_pred[0][0]
     # output_indices: [output_seq_len]
