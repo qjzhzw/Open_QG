@@ -35,7 +35,7 @@
 链接: https://pan.baidu.com/s/1JKaHR5mde8GGxYRXk33rSw  
 提取码: b95w  
 其中包含了所有原始数据和经过步骤1/2后得到的处理过后的数据,将数据放在新建的data文件夹中,即data/squad/  
-(其中原始数据由Song et al., 2018提供)  
+(其中原始数据由Song et al., 2018提供,相关论文为《Leveraging Context Information for Natural Question Generation》)  
 
 
 ## 文件结构介绍：
@@ -68,12 +68,14 @@ requirements.txt : 需要安装的依赖包及对应版本
 
 
 ## 实验结果:
-BLEU-1: 29.43  
-BLEU-2: 13.16  
-BLEU-3: 7.25  
-BLEU-4: 4.24  
-METEOR: 9.89  
-ROUGH-L: 29.44  
+BLEU-1: 32.49  
+BLEU-2: 15.72  
+BLEU-3: 9.08  
+BLEU-4: 5.54  
+METEOR: 11.91  
+ROUGH-L: 32.67  
+
+真不知道为什么比标准的RNNSearch的结果差那么多  
 
 
 ## 测试demo:

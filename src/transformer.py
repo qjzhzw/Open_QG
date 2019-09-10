@@ -155,7 +155,7 @@ class Decoder(nn.Module):
         self.output = nn.Linear(self.params.d_model, self.vocab_size)
 
         # copy机制所用的门控
-        self.copy_gate = nn.Linear(self.params.d_model, 1)
+        self.copy_gate = nn.Linear(self.params.d_model * 2, 1)
 
     def forward(self, output_indices, input_indices, encoder_hiddens):
         '''
@@ -192,9 +192,11 @@ class Decoder(nn.Module):
                               self.vocab)
         # output_indices: [batch_size, output_seq_len, d_model]
         # attention: [batch_size, output_seq_len, input_seq_len]
+        # context_vector: [batch_size, output_seq_len, d_model]
 
         if self.params.with_copy:
-            copy_gate = self.copy_gate(output_indices)
+            copy_gate = torch.cat((output_indices, context_vector), dim=-1)
+            copy_gate = self.copy_gate(copy_gate)
             copy_gate = torch.sigmoid(copy_gate)
             # copy_gate: [batch_size, output_seq_len, 1]
             # print(copy_gate[-1].squeeze())
@@ -213,7 +215,7 @@ class Decoder(nn.Module):
             copy_indices = self.copy(attention, input_indices, output_indices)
             # copy_indices: [batch_size, output_seq_len, vocab_size]
 
-            output_indices = copy_gate * copy_indices + (1 - copy_gate) * output_indices
+            output_indices = copy_gate * output_indices + (1 - copy_gate) * copy_indices
             # output_indices: [batch_size, output_seq_len, vocab_size]
 
         return output_indices
@@ -235,11 +237,6 @@ class Decoder(nn.Module):
         batch_size = attention.size(0)
         output_seq_len = attention.size(1)
         input_seq_len = attention.size(2)
-
-        # print(attention[-1])
-        # att = torch.max(attention[-1], dim=-1)[1]
-        # input_sen = self.vocab.convert_index2sentence(input_indices[-1])
-        # print('注意力 : {}'.format([input_sen[i] for i in att]))
 
         copy_indices = torch.zeros_like(output_indices)
         # copy_indices: [batch_size, output_seq_len, vocab_size]
@@ -381,6 +378,9 @@ class Multihead_attention(nn.Module):
         # 将多头信息合并后通过线性变换
         self.linear_o = nn.Linear(self.params.num_heads * self.params.d_v, self.params.d_model)
 
+        # 将context_vector通过线性变换,用于copy机制的门控实现
+        self.linear_context = nn.Linear(self.params.num_heads * self.params.d_v, self.params.d_model)
+
         # dropout和层正则化
         self.dropout = nn.Dropout(params.dropout)
         self.layer_norm = nn.LayerNorm(params.d_model)
@@ -448,6 +448,8 @@ class Multihead_attention(nn.Module):
         # context_vector: [batch_size, seq_len_query, num_heads * d_v]
         indices = self.linear_o(context_vector)
         # indices: [batch_size, seq_len_query, d_model]
+        context_vector = self.linear_context(context_vector)
+        # context_vector: [batch_size, seq_len_query, d_model]
 
         # 将attention的多头信息合并,便于进行copy机制
         attention = torch.mean(attention, dim=1)
