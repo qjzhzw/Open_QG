@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 install_requirements(){
     pip install -r requirements.txt
 }
@@ -42,7 +44,7 @@ if [ ! -n "$1" ] || [ ! -n "$2" ]; then
     5: 模型评估
     6: 测试demo
     可以同时指定多个运行模式,例如希望顺序执行 '3: 模型训练' 和 '4: 模型测试' 阶段,则命令为:  
-    `./pipeline.sh 34 [指定GPU]`  
+    "./pipeline.sh 34 [指定GPU]"
 
     指定GPU:
     使用第几块GPU，若当前无可用GPU会自动转换为CPU模式
